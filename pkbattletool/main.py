@@ -12,17 +12,24 @@ def gui_main():
     root = tk.Tk()
     width = 1400 #660
     height = 900
-    # root.geometry("{}x{}".format(width,height))
-    # root.minsize(width=width,height=height)
-    # root.maxsize(width=width,height=height)
+    
+    # ウィンドウタイトル
     root.title("ポケモン対戦支援ツール")
 
+    # メニューバーの設定
     menuber = MenuBar(root)
+    
     camera_capture = CameraCapture()
     # namebox_ocr_runner = OcrRunner(camera_capture, ocr_option="namebox")
     # pokemonbox_ocr_runner = OcrRunner(camera_capture, ocr_option="pokemonbox")
 
     # フレームウェジットの作成
+    """
+    frame_pkinfo        : 
+    frame_canvasgame    :ゲーム画面を映すフレーム
+    frame_capturecontrol:キャプチャコントロールのフレーム
+    frame_canvaspkbox   :相手の手持ちポケモンリストを表示するフレーム
+    """
     frame_pkinfo = PKInfo(root, camera_capture, bd=1, relief=tk.SOLID)
     frame_canvasgame = CanvasGame(root, camera_capture, bd=2, relief=tk.SOLID)
     frame_capturecontrol = CaptureControl(root, camera_capture, bd=1, relief=tk.SOLID)
