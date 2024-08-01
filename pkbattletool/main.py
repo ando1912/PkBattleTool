@@ -3,7 +3,7 @@ import os,sys
 from logging import getLogger, StreamHandler, DEBUG, Formatter, FileHandler
 
 from mylib import OcrRunner, CameraCapture
-from gui import MenuBar, PKInfo, CanvasGame, CaptureControl, CanvasPkBox
+from gui import MenuBar, PKInfo,PkInfo2, CanvasGame, CaptureControl, CanvasPkBox
 
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
@@ -20,7 +20,7 @@ def gui_main():
     menuber = MenuBar(root)
     
     camera_capture = CameraCapture()
-    # namebox_ocr_runner = OcrRunner(camera_capture, ocr_option="namebox")
+    namebox_ocr_runner = OcrRunner(camera_capture, ocr_option="namebox")
     # pokemonbox_ocr_runner = OcrRunner(camera_capture, ocr_option="pokemonbox")
 
     # フレームウェジットの作成
@@ -30,7 +30,8 @@ def gui_main():
     frame_capturecontrol:キャプチャコントロールのフレーム
     frame_canvaspkbox   :相手の手持ちポケモンリストを表示するフレーム
     """
-    frame_pkinfo = PKInfo(root, camera_capture, bd=1, relief=tk.SOLID)
+    # frame_pkinfo = PKInfo(root, camera_capture, bd=1, relief=tk.SOLID)
+    frame_pkinfo = PkInfo2(root, namebox_ocr_runner, bd=1, relief=tk.SOLID)
     frame_canvasgame = CanvasGame(root, camera_capture, bd=2, relief=tk.SOLID)
     frame_capturecontrol = CaptureControl(root, camera_capture, bd=1, relief=tk.SOLID)
     frame_canvaspkbox = CanvasPkBox(root, camera_capture, bd=2, relief=tk.SOLID)
