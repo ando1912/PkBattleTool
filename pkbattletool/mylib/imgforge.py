@@ -4,6 +4,10 @@ from logging import getLogger
 from mylib import CameraCapture
 
 class CameraFrameForge():
+    """
+    ゲーム画面の切り抜きに関するクラス
+    option:message/namebox/pokemonbox
+    """
     def __init__(self,camera_capture:CameraCapture, option:str) -> None:
         self.logger = getLogger("Log").getChild("ImgCrop")
         self.logger.debug("Hello ImgCrop")
@@ -11,6 +15,7 @@ class CameraFrameForge():
         self.width = int(camera_capture.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(camera_capture.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.optionlist =  {
+            # メッセージボックス
             "message":{
                 "top":int(self.height/14*10),
                 "bottom":int(self.height/14*12),
@@ -18,18 +23,43 @@ class CameraFrameForge():
                 "right":int(self.width/8*7),
                 "bgr":[230,230,230],
                 "thresh":200},
+            # 相手のレベル
+            # 1920x1080での座標
+            #     top:49
+            #     bottom:89
+            #     left:1540
+            #     right:1690
+            "level":{
+                "top":int(self.height*0.045),
+                "bottom":int(self.height*0.082),
+                "left":int(self.width*0.802),
+                "right":int(self.width*0.880),
+                "bgr":[230,230,230],
+                "thresh":200},
+            # ネームボックス
+            # 1920x1080での座標
+            #     top:98
+            #     bottom:140
+            #     left:1535
+            #     right:1825
             "namebox":{
-                "top":int(self.height/22*2),
-                "bottom":int(self.height/22*3),
-                "left":int(self.width/20*16),
-                "right":int(self.width/20*19),
+                "top":int(self.height*0.091),
+                "bottom":int(self.height*0.130),
+                "left":int(self.width*0.799),
+                "right":int(self.width*0.951),
                 "bgr":[230,230,230],
                 "thresh":240},
+            # 選出時のポケモンボックス
+            # 1920x1080での座標
+            #     top:223
+            #     bottom:836
+            #     left:1338
+            #     right:1232
             "pokemonbox":{
-                "top":int(self.height*0.212),#0.212),
-                "bottom":int(self.height*0.773),#0.772),
-                "left":int(self.width*0.642),#0.642),
-                "right":int(self.width*0.697+420),#0.697),
+                "top":int(self.height*0.206),
+                "bottom":int(self.height*0.774),
+                "left":int(self.width*0.642),
+                "right":int(self.width*0.697),
                 "bgr":[230,230,230],
                 "thresh":220}
         }
