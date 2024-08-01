@@ -32,6 +32,7 @@ class OcrRunner:
         self.height = int(self.camera_capture.vid.get(cv.CAP_PROP_FRAME_HEIGHT))
 
         self.list_ocr_option =  {
+            # 戦闘メッセージボックス
             "message":{
                 "top":int(self.height/14*10),
                 "bottom":int(self.height/14*12),
@@ -39,6 +40,7 @@ class OcrRunner:
                 "right":int(self.width/8*7),
                 "bgr":[230,230,230],
                 "thresh":200},
+            # 名前の枠
             "namebox":{
                 "top":int(self.height/22*2),
                 "bottom":int(self.height/22*3),
@@ -46,6 +48,7 @@ class OcrRunner:
                 "right":int(self.width/20*19),
                 "bgr":[230,230,230],
                 "thresh":240},
+            # 選出時の相手の手持ち枠
             "pokemonbox":{
                 "top":int(self.height*0.212),#0.212),
                 "bottom":int(self.height*0.773),#0.772),
