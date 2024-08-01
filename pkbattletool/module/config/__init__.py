@@ -35,7 +35,7 @@ class ConfigIni(configparser.ConfigParser):
                 "display_fps" : 30,
                 "display_width" : 640,
                 "display_height" : 360}
-
+        
     def print_conf(self):
         # FIXME: configparserの仕様で、セクションに含まれないキーをDEFAULTから持ってきてしまう
         self.logger.debug("Execuse print_conf")
@@ -60,21 +60,35 @@ class ConfigIni(configparser.ConfigParser):
             with open(f"{PATH}/config.ini", "w") as configfile:
                 self.write(configfile)
 
-    def write_conf(self,new_conf):
-        # 元のファイルをリネーム
-        os.rename(f"{PATH}/config.ini",f"{PATH}/config_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}.ini")
+    def write_conf(self):
+        path1 = f"{PATH}/config.ini"
+        path2 = f"{PATH}/config.ini.old"
+        path3 = f"{PATH}/config.ini.old2"
+        
+        # 2つ前のiniファイルがあったら削除する
+        if os.path.exists(path3):
+            os.remove(path3)
+        # 1つ前のiniファイルがあったらold2へリネームする
+        if os.path.exists(path2):
+            os.rename(path2, path3)
+        # config.iniをconfig.ini.oldにリネームする
+        os.rename(path1,path2)
+        # config.iniを新しく書き出す
         with open(f"{PATH}/config.ini", 'w') as configfile:
-            new_conf.write(configfile)
+            self.write(configfile)
 
 _util = ConfigIni()
 
+# 設定値の取得
 def get(section,key):
     return _util.get(section,key)
 
-def update(new_conf):
-    _util.update(new_conf)
-    with open(f"{PATH}/config.ini", 'w') as configfile:
-        _util.write(configfile)
+# 設定の更新
+def update(section,key,value):
+    _util[section][key] = value
+
+def write():
+    _util.write_conf()
 
 def debug():
     print("Import ini file ...")
