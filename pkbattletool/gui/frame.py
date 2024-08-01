@@ -283,8 +283,8 @@ class CanvasPkBox(tk.Frame):
                     # print("White:"+str(whiteAreaRatio) +"[%]\nBlack:" + str(blackAreaRatio)+"[%]")
                     self.logger.debug(f"White:{whiteAreaRatio:2f}[%]")
                     self.logger.debug(f"Black:{blackAreaRatio:2f}[%]")
-                    # if whiteAreaRatio > 60 and whiteAreaRatio < 70:
-                    if True:
+                    if whiteAreaRatio > 60 and whiteAreaRatio < 70:
+                    # if True:
                         self.func_save_pkbox(crop_frame)
             self.after(4000, self.update_pkbox)
 
