@@ -1,16 +1,20 @@
 import tkinter as tk
 import re
+import cv2
 from logging import getLogger
 
 from module import config
 
+# メニューバーを作成するクラス
 class MenuBar(tk.Menu):
     # TODO サブウィンドウが表示されていた場合は追加で表示しないようにする
-    """メニューバー作成クラス"""
+    
     def __init__(self, master,**kwargs):
         super().__init__(master, **kwargs)
         self.root = master
         master.config(menu=self)
+        
+        # Loggerの設定
         self.logger = getLogger("Log").getChild("MenuBar")
         self.logger.debug("Hello MenuBar")
         
@@ -46,7 +50,7 @@ class MenuBar(tk.Menu):
 class SubWindowMenu(tk.Toplevel):
     """
     サブウィンドウ作成クラス
-    引数として親ルート、iniコンフィグを渡す
+    引数として親ルートを渡す
     """
     def __init__(self, master:tk):
         self.root = master
@@ -67,6 +71,7 @@ class SubWindowMenu(tk.Toplevel):
         if match:
             self.root_width,self.root_height,self.root_x, self.root_y = map(int, match.groups())
 
+    # ウィンドウを閉じる
     def close(self, root):
         self.logger.debug("Execute close")
         """
@@ -74,10 +79,24 @@ class SubWindowMenu(tk.Toplevel):
         """
         root.destroy()
 
+    # サブウィンドウの多重表示の検知
+    def detect_multi_subwindow(self):
+        
+        if self.sub_window and self.sub_window.winfo_exists():
+            self.sub_window.lift()
+            return True
+        else:
+            False
+
+    # バージョン情報を表示する
     def create_versioninfo_window(self):
         """
         バージョン情報ウィンドウ
         """
+        
+        if self.detect_multi_subwindow():
+            return
+        
         self.logger.debug("Execute create_versioninfo_window")
         self.extract_coordinates()
         width = 300
@@ -110,32 +129,35 @@ class SubWindowMenu(tk.Toplevel):
         width = 300
         height = 100
 
-        self.sub_window = tk.Toplevel(self.root)
-        self.sub_window.title("ウィンドウを閉じる")
-        self.sub_window.geometry("{}x{}+{}+{}".format(
+        self.confirmation_window = tk.Toplevel(self.root)
+        self.confirmation_window.title("ウィンドウを閉じる")
+        self.confirmation_window.geometry("{}x{}+{}+{}".format(
             width,
             height,
             int(self.root_x+self.root_width/2-width/2),
             int(self.root_y+self.root_height/2-height/2)))
 
         # メインフレーム
-        frame = tk.Frame(self.sub_window)
+        frame = tk.Frame(self.confirmation_window)
         frame.pack(fill=tk.BOTH, pady=10)
 
         # ウェジット
         label_message = tk.Label(frame, text="ソフトウェアを終了しますか？",font=("MSゴシック", "15", "bold")).grid(columnspan=2)
-        # button_yes = tk.Button(frame, text="はい", command=lambda:self.close(master)).grid(row=1,column=0)
         button_yes = tk.Button(frame, text="はい", command=master.destroy).grid(row=1,column=0)
-        button_no = tk.Button(frame, text="いいえ", command=lambda:self.close(self.sub_window)).grid(row=1,column=1)
+        button_no = tk.Button(frame, text="いいえ", command=lambda:self.close(self.confirmation_window)).grid(row=1,column=1)
 
     def create_setting_window(self):
         """
         環境設定ウィンドウ
         iniコンフィグを渡す
         """
+        
+        if self.detect_multi_subwindow():
+            return
+        
         self.logger.debug("Execute create_setting_window")
         self.extract_coordinates()
-        width = 400
+        width = 600
         height = 200
 
         self.sub_window = tk.Toplevel(self.root)
@@ -146,74 +168,119 @@ class SubWindowMenu(tk.Toplevel):
             int(self.root_x+self.root_width/2-width/2),
             int(self.root_y+self.root_height/2-height/2)))
 
+        # カメラのID一覧を取得
+        def getCamInfo():
+            caminfo = {}
+            for i in range(0,10):
+                cap = cv2.VideoCapture(i)
+                if cap.isOpened():
+                    caminfo[i] = "Active"
+                else:
+                    caminfo[i] = "None"
+                cap.release()
+            return caminfo
+        
 
         # メインフレーム
         frame = tk.Frame(self.sub_window)
         frame.pack(fill=tk.BOTH, pady=10)
+        
+        
+        # グリッドの設定（カラムの引き伸ばしを有効にする）
+        frame.grid_columnconfigure(1, weight=1)
 
         # ウェジット
         label_pokemondb_url = tk.Label(frame, text="ポケモンDB-URL")
-        entry_pokemondb_url = tk.Entry(frame, width=20)
+        entry_pokemondb_url = tk.Entry(frame, width=40)
         entry_pokemondb_url.insert(0,config.get("DEFAULT","pokedb_url"))
 
         label_season = tk.Label(frame, text="シーズン設定")
-        entry_season = tk.Entry(frame, width=20)
+        entry_season = tk.Entry(frame, width=40)
         entry_season.insert(0,config.get("DEFAULT","season"))
 
         label_rule = tk.Label(frame, text="ルール\n(0：シングル / 1：ダブル)",justify="left")
-        entry_rule = tk.Entry(frame, width=20)
-        entry_rule.insert(0,config.get("DEFAULT","rule"))
+        
+        rule_options = {
+            "シングル":1,
+            "ダブル":2
+        }
+        rule_value = config.get("DEFAULT","rule")
+        default_rule_display = "シングル" if rule_value=="1" else "ダブル"
+        
+        rule_var = tk.StringVar(value = default_rule_display)
+        option_rule_menu = tk.OptionMenu(frame, rule_var, *rule_options.keys())
 
         label_cameraid = tk.Label(frame, text="カメラID")
-        entry_cameraid = tk.Entry(frame, width=20)
-        entry_cameraid.insert(0,config.get("DEFAULT","camera_id"))
+        
+        caminfo = getCamInfo()
+        cameraidlist = [f"Camera ID = {key} ({index})" for key, index in caminfo.items()]
+        
+        cameraid_value = config.get("DEFAULT","rule")
+        default_cameraid_display = cameraidlist[int(cameraid_value)]
+        
+        cameraid_var = tk.StringVar(value = default_cameraid_display)
+        option_cameraid_menu = tk.OptionMenu(frame, cameraid_var, *cameraidlist)
+        
+        # entry_cameraid = tk.Entry(frame, width=40)
+        # entry_cameraid.insert(0,config.get("DEFAULT","camera_id"))
 
         label_browser_path = tk.Label(frame, text="ブラウザのパス")
-        entry_browser_path = tk.Entry(frame, width=20)
+        entry_browser_path = tk.Entry(frame, width=40)
         entry_browser_path.insert(0,config.get("DEFAULT","browser_path"))
 
-        label_tesseract_path = tk.Label(frame, text="Tesseractのパス")
-        entry_tesseract_path = tk.Entry(frame, width=20)
-        entry_tesseract_path.insert(0,config.get("DEFAULT","tesseract_path"))
+        # label_tesseract_path = tk.Label(frame, text="Tesseractのパス")
+        # entry_tesseract_path = tk.Entry(frame, width=20)
+        # entry_tesseract_path.insert(0,config.get("DEFAULT","tesseract_path"))
 
 
+        # 設定更新ボタンを押したときの処理
         def update_config():
             self.logger.debug("Execute update_config")
-            pokemondb_url = entry_pokemondb_url.get()
-            season = entry_season.get()
-            rule = entry_rule.get()
-            cameraid = entry_cameraid.get()
-            browser_path = entry_browser_path.get()
-            tesseract_path = entry_tesseract_path.get()
+            
+            # 環境設定の取得
+            new_config = {
+                    "pokedb_url":entry_pokemondb_url.get(),
+                    "season":entry_season.get(),
+                    "rule":str(rule_options[rule_var.get()]),
+                    "camera_id":entry_cameraid.get(),
+                    "browser_path":entry_browser_path.get(),
+                    # "tesseract_path":entry_tesseract_path.get()
+                }
 
-            new_ini_config["DEFAULT"]["pokedb_url"] = pokemondb_url
-            new_ini_config["DEFAULT"]["season"] = season
-            new_ini_config["DEFAULT"]["rule"] = rule
-            new_ini_config["DEFAULT"]["camera_id"] = cameraid
-            new_ini_config["DEFAULT"]["browser_path"] = browser_path
-            new_ini_config["DEFAULT"]["tesseract_path"] = tesseract_path
+            # configの更新
+            for key, index in new_config.items():
+                config.update("DEFAULT",key,index)
 
-            self.config.write_conf(new_ini_config)
+            # config.iniを更新する
+            config.write()
+            
+            self.close(self.sub_window)
 
-        button_update = tk.Button(frame, text="設定を更新する", command=update_config)
+        button_conf_update = tk.Button(frame, text="設定を更新する", command=update_config)
 
         # ウェジットの配置
+        # データベースのURL
         label_pokemondb_url.grid(row=0,column=0,sticky="W")
-        entry_pokemondb_url.grid(row=0,column=1,columnspan=2,sticky="W")
+        entry_pokemondb_url.grid(row=0,column=1,columnspan=2,sticky="EW")
 
+        # シーズン指定
         label_season.grid(row=1,column=0,sticky="W")
-        entry_season.grid(row=1,column=1,columnspan=2,sticky="W")
+        entry_season.grid(row=1,column=1,columnspan=2,sticky="EW")
 
+        # ルール指定
         label_rule.grid(row=2,column=0,sticky="W")
-        entry_rule.grid(row=2,column=1,columnspan=2,sticky="W")
+        option_rule_menu.grid(row=2,column=1,columnspan=2,sticky="EW")
 
+        # ChromeブラウザのPATH
         label_browser_path.grid(row=3,column=0,sticky="W")
-        entry_browser_path.grid(row=3,column=1,columnspan=2,sticky="W")
+        entry_browser_path.grid(row=3,column=1,columnspan=2,sticky="EW")
 
+        # カメラID
         label_cameraid.grid(row=4,column=0,sticky="W")
-        entry_cameraid.grid(row=4,column=1,columnspan=2,sticky="W")
+        option_cameraid_menu.grid(row=4,column=1,columnspan=2,sticky="EW")
 
-        label_tesseract_path.grid(row=5,column=0,sticky="W")
-        entry_tesseract_path.grid(row=5,column=1,columnspan=2,sticky="W")
 
-        button_update.grid(row=10,column=2)
+        # label_tesseract_path.grid(row=5,column=0,sticky="W")
+        # entry_tesseract_path.grid(row=5,column=1,columnspan=2,sticky="W")
+
+        button_conf_update.grid(row=10,column=1)
