@@ -3,7 +3,7 @@ import os,sys
 from logging import getLogger, StreamHandler, INFO, DEBUG, Formatter, FileHandler
 
 from mylib import OcrRunner, CameraCapture
-from gui import MenuBar, PKInfo,PkInfo2, CanvasGame, CaptureControl, CanvasPkBox
+from gui import MenuBar, PKInfo, PkInfo2, CanvasGame, CaptureControl, CanvasPkBox
 
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
