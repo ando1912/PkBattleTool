@@ -172,12 +172,16 @@ class SubWindowMenu(tk.Toplevel):
         def getCamInfo():
             caminfo = {}
             for i in range(0,10):
-                cap = cv2.VideoCapture(i)
-                if cap.isOpened():
-                    caminfo[i] = "Active"
-                else:
-                    caminfo[i] = "None"
-                cap.release()
+                try:
+                    cap = cv2.VideoCapture(i)
+                    if cap.isOpened():
+                        caminfo[i] = "Active"
+                    else:
+                        caminfo[i] = "None"
+                except:
+                    self.logger.error("Coudn't get Camera-ID")
+                finally:
+                    cap.release()
             return caminfo
         
 
