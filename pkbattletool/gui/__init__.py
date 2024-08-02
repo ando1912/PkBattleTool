@@ -1,5 +1,5 @@
 # gui/__init__.py
-from .frame import PKInfo
+from .frame import PKInfo, PkInfo2
 from .frame import CanvasGame
 from .frame import CaptureControl
 from .frame import CanvasPkBox
