@@ -167,3 +167,5 @@ screehshot/
 outline/
 binary/
 log.txt
+*.old
+*.old2
