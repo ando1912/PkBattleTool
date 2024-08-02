@@ -54,7 +54,7 @@ def main():
     logger = getLogger("Log")
     handler = StreamHandler()
 
-    LOG_LEVEL = INFO
+    LOG_LEVEL = DEBUG
     
     logger.setLevel(LOG_LEVEL)
     handler.setLevel(LOG_LEVEL)
