@@ -1,5 +1,5 @@
 import cv2 as cv
-import os
+import os, sys
 import pyocr
 from PIL import Image
 import threading
@@ -7,6 +7,8 @@ import re
 from logging import getLogger
 
 from module import config
+
+PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class OcrRunner:
     """
@@ -16,6 +18,7 @@ class OcrRunner:
     .binaly_frame=二値化処理後画像
     .text=OCR分析結果
     """
+    # BUG:スレッドを終了しないままウィンドウを閉じるとプロセスが終わらない
     def __init__(self, camera_capture, ocr_option:str):
         self.logger = getLogger("Log").getChild(f"OcrRunner:{ocr_option}")
         self.logger.info(f"Called OcrRunner:{ocr_option}")
@@ -25,12 +28,7 @@ class OcrRunner:
         self.option = ocr_option
         self.camera_capture = camera_capture
 
-        # クラス内管理ではなく、return管理にしたため、削除予定
         self.frame = None
-        # self.cropped_frame = None
-        # self.grayscale_frame = None
-        # self.binaly_frame = None
-        
         self.frame_list = []
 
         self.width = int(self.camera_capture.vid.get(cv.CAP_PROP_FRAME_WIDTH))
@@ -115,11 +113,8 @@ class OcrRunner:
     def stop_ocr_thread(self):
         self.logger.debug("Execute stop_ocr_thread")
         self.is_ocr_running = False
-        if self.ocr_name_thread and self.ocr_name_thread.is_alive():
-            self.ocr_name_thread.join()
 
     def run_ocr_thread(self):
-        # TODO:1枚ずつのOCRを、直近複数枚をあわせたOCR処理にしたい
         self.logger.info("Execute run_ocr_thread()")
         while self.is_ocr_running:
             # 画像の取得と加工
@@ -222,9 +217,6 @@ class OcrRunner:
         tools = pyocr.get_available_tools()
         tool= tools[0]
 
-        # self.save_frame(frame, f"ocr_image_{self.option}.jpg")
-        # _, frame = self.binaly_img(frame)
-        # self.save_frame(frame, "ocr_image_binary.jpg")
         PIL_Image = Image.fromarray(frame)
         self.text = tool.image_to_string(
             PIL_Image,
