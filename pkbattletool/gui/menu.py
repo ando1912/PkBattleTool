@@ -1,6 +1,9 @@
 import tkinter as tk
 import re
 import cv2
+
+import threading
+
 from logging import getLogger
 
 from module import config
@@ -205,11 +208,11 @@ class SubWindowMenu(tk.Toplevel):
         label_rule = tk.Label(frame, text="ルール\n(0：シングル / 1：ダブル)",justify="left")
         
         rule_options = {
-            "シングル":1,
-            "ダブル":2
+            "シングル":0,
+            "ダブル":1
         }
         rule_value = config.get("DEFAULT","rule")
-        default_rule_display = "シングル" if rule_value=="1" else "ダブル"
+        default_rule_display = "シングル" if rule_value=="0" else "ダブル"
         
         rule_var = tk.StringVar(value = default_rule_display)
         option_rule_menu = tk.OptionMenu(frame, rule_var, *rule_options.keys())
@@ -217,24 +220,22 @@ class SubWindowMenu(tk.Toplevel):
         label_cameraid = tk.Label(frame, text="カメラID")
         
         caminfo = getCamInfo()
-        cameraidlist = [f"Camera ID = {key} ({index})" for key, index in caminfo.items()]
+        cameraid_options = {f"Camera ID = {key} ({index})":key for key, index in caminfo.items()}
+        cameraid2label = {index:key for key, index in cameraid_options.items()}
         
-        cameraid_value = config.get("DEFAULT","rule")
-        default_cameraid_display = cameraidlist[int(cameraid_value)]
+        cameraid_value = config.get("DEFAULT","camera_id")
+        default_cameraid_display = cameraid2label[int(cameraid_value)]
         
         cameraid_var = tk.StringVar(value = default_cameraid_display)
-        option_cameraid_menu = tk.OptionMenu(frame, cameraid_var, *cameraidlist)
-        
-        # entry_cameraid = tk.Entry(frame, width=40)
-        # entry_cameraid.insert(0,config.get("DEFAULT","camera_id"))
+        option_cameraid_menu = tk.OptionMenu(frame, cameraid_var, *cameraid_options.keys())
 
         label_browser_path = tk.Label(frame, text="ブラウザのパス")
         entry_browser_path = tk.Entry(frame, width=40)
         entry_browser_path.insert(0,config.get("DEFAULT","browser_path"))
 
-        # label_tesseract_path = tk.Label(frame, text="Tesseractのパス")
-        # entry_tesseract_path = tk.Entry(frame, width=20)
-        # entry_tesseract_path.insert(0,config.get("DEFAULT","tesseract_path"))
+        label_tesseract_path = tk.Label(frame, text="Tesseractのパス")
+        entry_tesseract_path = tk.Entry(frame, width=40)
+        entry_tesseract_path.insert(0,config.get("DEFAULT","tesseract_path"))
 
 
         # 設定更新ボタンを押したときの処理
@@ -246,9 +247,9 @@ class SubWindowMenu(tk.Toplevel):
                     "pokedb_url":entry_pokemondb_url.get(),
                     "season":entry_season.get(),
                     "rule":str(rule_options[rule_var.get()]),
-                    "camera_id":entry_cameraid.get(),
+                    "camera_id":str(cameraid_options[cameraid_var.get()]),
                     "browser_path":entry_browser_path.get(),
-                    # "tesseract_path":entry_tesseract_path.get()
+                    "tesseract_path":entry_tesseract_path.get()
                 }
 
             # configの更新
@@ -283,8 +284,8 @@ class SubWindowMenu(tk.Toplevel):
         label_cameraid.grid(row=4,column=0,sticky="W")
         option_cameraid_menu.grid(row=4,column=1,columnspan=2,sticky="EW")
 
-
-        # label_tesseract_path.grid(row=5,column=0,sticky="W")
-        # entry_tesseract_path.grid(row=5,column=1,columnspan=2,sticky="W")
+        # tesseractのPATH
+        label_tesseract_path.grid(row=5,column=0,sticky="W")
+        entry_tesseract_path.grid(row=5,column=1,columnspan=2,sticky="W")
 
         button_conf_update.grid(row=10,column=1)
