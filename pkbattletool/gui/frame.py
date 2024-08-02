@@ -6,6 +6,7 @@ from PIL import Image, ImageTk
 import cv2
 import numpy as np
 import tkinter as tk
+import Levenshtein
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -333,6 +334,8 @@ class CanvasPkBox(tk.Frame):
 
         self.camera_capture = camera_capture
 
+        self.ocr_control = OcrControl(OcrRunner(self.camera_capture, "rankbattle"))
+        
         self.pkhash = PkHash()
         self.imgf = CameraFrameForge(camera_capture,"pokemonbox")
 
@@ -376,62 +379,93 @@ class CanvasPkBox(tk.Frame):
             self.logger.debug("Execute update_pkbox")
             # print("CanvasPkBox.updateを実行")
             if self.camera_capture.is_capturing: # カメラが有効だった場合
-                camera_frame = self.camera_capture.get_frame()
-                if camera_frame is not None:
-                    crop_frame = self.imgf.crop_frame(camera_frame)
-                    binaly_frame = self.imgf.binaly_frame(self.imgf.grayscale_frame(crop_frame))
-                    size = binaly_frame.size
-                    white = cv2.countNonZero(binaly_frame)
-                    whiteAreaRatio = (white/size)*100
-                    blackAreaRatio = 100-whiteAreaRatio
-                    # print("White:"+str(whiteAreaRatio) +"[%]\nBlack:" + str(blackAreaRatio)+"[%]")
-                    self.logger.debug(f"White:{whiteAreaRatio:2f}[%]")
-                    self.logger.debug(f"Black:{blackAreaRatio:2f}[%]")
-                    if whiteAreaRatio > 60 and whiteAreaRatio < 70:
-                    # if True:
+                # TODO:選出画面時のみに撮影
+                if not self.ocr_control.activemode: # OCRが無効化されていたら有効化する
+                    self.ocr_control.start_ocr_thread()
+                
+                # 選出時の画面テキストを取得
+                text = self.ocr_control.get_ocrtext()
+                
+                # 文字列の類似度計算
+                if text is not None:
+                    similar_val = Levenshtein.distance(text, "ランクバトル")
+                    self.logger.debug(f"OCR read {text}({similar_val})")
+                else:
+                    similar_val = 99
+                
+                if similar_val < 3:
+                    camera_frame = self.camera_capture.get_frame()
+                    if camera_frame is not None:
+                        crop_frame = self.imgf.crop_frame(camera_frame)
+                        # 手持ち選出の判定をボックスの黒白の割合で検出
+                        # 画面上の文字認識でトリガー化したため削除予定
+                        # binaly_frame = self.imgf.binaly_frame(self.imgf.grayscale_frame(crop_frame))
+                        # size = binaly_frame.size
+                        # white = cv2.countNonZero(binaly_frame)
+                        # whiteAreaRatio = (white/size)*100
+                        # blackAreaRatio = 100-whiteAreaRatio
+                        # print("White:"+str(whiteAreaRatio) +"[%]\nBlack:" + str(blackAreaRatio)+"[%]")
+                        # self.logger.debug(f"White:{whiteAreaRatio:2f}[%]")
+                        # self.logger.debug(f"Black:{blackAreaRatio:2f}[%]")
+                        # if whiteAreaRatio > 60 and whiteAreaRatio < 70:
+                        
+                        # デバッグ
+                        # cv2.imwrite("debug.jpg", crop_frame)
+                        # self.logger.info(type(crop_frame))
                         self.func_save_pkbox(crop_frame)
-            self.after(4000, self.update_pkbox)
+            
+            else: # カメラが無効化されていた場合の処理
+                if self.ocr_control.activemode: # OCRが有効化されていたら無効化する
+                    self.ocr_control.stop_ocr_thread()
+            self.after(2000, self.update_pkbox)
 
-    def func_save_pkbox(self,crop_frame):
+    def func_save_pkbox(self, crop_frame):
         """
         画面内の手持ちリストを撮影し、キャンパスに描画する
         """
         self.logger.debug("Execute func_save_pkbox")
         # フレームを取得
-        self.box_frame = crop_frame
-        height, width, _ = self.box_frame.shape[:3]
-        # ボックスサイズをトリミング
-        self.crop_frame = self.box_frame[0:height,0:width-420]
+        self.crop_frame = crop_frame
 
-        # キャッシュフレームが無い or ユークリッド距離が30000以上の(cropフレームと一致しない際)に画像を保存、情報を表示する
-        # print("check_cashframe")
-        if not self.cash_frame is None:
-            euclid_value = np.linalg.norm(self.cash_frame - self.crop_frame)
-            cos_value = np.dot(self.cash_frame.flatten(), self.crop_frame.flatten()) / (np.linalg.norm(self.cash_frame.flatten()) * np.linalg.norm(self.crop_frame.flatten()))
-            # print(f"ユークリッド距離：{euclid_value}")
-            # print(f"コサイン類似度：{cos_value}")
-            self.logger.debug(f"Euclid_Value:{euclid_value:2f}")
-            self.logger.debug(f"Cps_Value:{cos_value:2f}")
-
-        if self.cash_frame is None or (43000 >=  euclid_value >= 35000):
-            self.logger.debug("Cash_frame is None" if self.cash_frame is None else "Euclid_value is not equal")
+        # キャッシュフレームが無い or 画像の類似度が低い場合の処理
+        if self.cash_frame is not None: # キャッシュフレーム(直前のフレーム)がある場合に、類似度を調べる
+            
+            # 画素値比較
+            # 参考：https://qiita.com/jun_higuche/items/752ef756a182261fcc55
+            similar_val = np.count_nonzero(self.cash_frame == self.crop_frame) / self.crop_frame.size
+            self.logger.info(f"Similar vallue : {similar_val}")
+            
+        
+        if self.cash_frame is None or (similar_val <= 0.6): # キャッシュフレームが無いor画像が類似していない場合、表示を更新する
+            self.logger.debug("Cash_frame is None" if self.cash_frame is None else "Team image is not similar")
 
             date = datetime.datetime.now().strftime("%y%m%d%H%M%S")
-            # filename1 = f"{PATH}/{self.screenshot_folder_path}/frame/screenshot_{date}.png"
+            folder_path = f"{PATH}/{self.screenshot_folder_path}/frame/"
+            filename = "screenshot_{date}.png"
             # filename2 = f"{PATH}/{self.screenshot_folder_path}/frame/dhash_{date}.json"
-            # cv2.imwrite("{}".format(filename1),self.crop_frame)
+            try:
+                if not os.path.exists(folder_path):
+                    os.makedirs(folder_path)
+                    self.logger.info(f"Success makedir {folder_path}")
+            except:
+                self.logger.error(f"Fault makedir {folder_path}")
+            cv2.imwrite(f"{filename}",self.crop_frame)
             # self.save_dhash(filename2, self.crop_frame)
             self.cash_frame = self.crop_frame # キャッシュのコピー
 
             # フレーム内のポケモンの認識結果のキーと、類似度のリストを取得
-            self.keylist, self.dislist, self.cutframelist, self.outline_iconlist = self.pkhash.RecognitionPokemonImages(self.crop_frame)
+            try:
+                self.keylist, self.dislist, self.cutframelist, self.outline_iconlist = self.pkhash.RecognitionPokemonImages(self.crop_frame)
+            except:
+                self.logger.error("Fault to run RecognitionPokemonImages")
+                return
 
             # アイコン画像の保存
             for i in range(0,6):
                 cv2.imwrite(f"{PATH}/icon/outline/{date}_{i}.png",self.outline_iconlist[i])
                 gray = cv2.cvtColor(self.outline_iconlist[i], cv2.COLOR_BGR2GRAY)
-                _, binary = cv2.threshold(gray, 130, 255, cv2.THRESH_BINARY_INV)
-                cv2.imwrite(f"{PATH}/icon/binary/{date}_{i}.png",binary)
+                _, binary_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
+                cv2.imwrite(f"{PATH}/icon/binary/{date}_{i}.png",binary_img)
                 self.logger.debug(f"Write {PATH}/icon/outline/{date}_{i}.png")
 
             # 表示の更新
@@ -653,13 +687,16 @@ class ClickMenu:
             self.sub_window.destroy()
         
         def search_key():
-            key = self.entry_key.get()
-            result_df = self.pokemon_df.loc[str(key)]
-            self.entry_name.delete(0,tk.END)
-            self.entry_name.insert(0,result_df["Name"])
-            self.entry_form.delete(0,tk.END)
-            if result_df["Form"] != None:
-                self.entry_form.insert(0,result_df["Form"])
+            try:
+                key = self.entry_key.get()
+                result_df = self.pokemon_df.loc[str(key)]
+                self.entry_name.delete(0,tk.END)
+                self.entry_name.insert(0,result_df["Name"])
+                self.entry_form.delete(0,tk.END)
+                if result_df["Form"] != None:
+                    self.entry_form.insert(0,result_df["Form"])
+            except:
+                self.logger.error("Fault to search unique-num")
 
 
         self.button_search = tk.Button(self.frame, text="検索", command=search_key)
