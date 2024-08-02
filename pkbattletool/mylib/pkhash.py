@@ -1,5 +1,5 @@
 """
-出展：https://note.com/kaseki_mtg/n/n6df12de8981a
+参考引用：https://note.com/kaseki_mtg/n/n6df12de8981a
 作者：暇士
 """
 import os, sys
@@ -14,7 +14,7 @@ PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 class PkHash:
     def __init__(self):
         self.logger = getLogger("Log").getChild("PkHash")
-        self.logger.debug("Hello PkHash")
+        self.logger.info("Called PkHash")
 
         self.crop_frame = None # ポケモン一覧画像
 
@@ -142,17 +142,17 @@ class PkHash:
         return contours
 
 def debug_PkCSV():
-    pkcsv = PkCSV()
+    csv = pkcsv.PkCSV()
     key="1000"
-    print(pkcsv.pokemon_df[key:key][["Type1","Type2"]])
+    print(csv.pokemon_df[key:key][["Type1","Type2"]])
     #print(pkcsv.pokemon_df.head(5))
 
 def debug_PkHash():
     pkhash = PkHash()
     keylist,dislist,_,_ = pkhash.RecognitionPokemonImages(cv2.imread(f"{PATH}/debug/screenshot_240105101126.png"))
     print(keylist,dislist)
-    pkcsv = PkCSV()
-    df2 = pkcsv.pokemon_df.loc[keylist]
+    csv = pkcsv.PkCSV()
+    df2 = csv.pokemon_df.loc[keylist]
     print(df2)
 
 if __name__ == "__main__":
