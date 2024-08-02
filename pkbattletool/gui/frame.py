@@ -333,6 +333,8 @@ class CanvasPkBox(tk.Frame):
 
         self.camera_capture = camera_capture
 
+        self.ocr_control = OcrControl(OcrRunner(self.camera_capture, "rankbattle"))
+        
         self.pkhash = PkHash()
         self.imgf = CameraFrameForge(camera_capture,"pokemonbox")
 
@@ -376,6 +378,13 @@ class CanvasPkBox(tk.Frame):
             self.logger.debug("Execute update_pkbox")
             # print("CanvasPkBox.updateを実行")
             if self.camera_capture.is_capturing: # カメラが有効だった場合
+                # TODO:選出画面時のみに撮影
+                if not self.ocr_control.activemode: # OCRが無効化されていたら有効化する
+                    self.ocr_control.start_ocr_thread()
+                
+                text = self.ocr_control.get_ocrtext()
+                self.logger.info(text)
+                
                 camera_frame = self.camera_capture.get_frame()
                 if camera_frame is not None:
                     crop_frame = self.imgf.crop_frame(camera_frame)
@@ -390,6 +399,10 @@ class CanvasPkBox(tk.Frame):
                     if whiteAreaRatio > 60 and whiteAreaRatio < 70:
                     # if True:
                         self.func_save_pkbox(crop_frame)
+            
+            else: # カメラが無効化されていた場合の処理
+                if self.ocr_control.activemode: # OCRが有効化されていたら無効化する
+                    self.ocr_control.stop_ocr_thread()
             self.after(4000, self.update_pkbox)
 
     def func_save_pkbox(self,crop_frame):
