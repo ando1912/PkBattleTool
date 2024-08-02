@@ -19,10 +19,9 @@ class PkHash:
         self.crop_frame = None # ポケモン一覧画像
 
     # ポケモン画像解析
-    def RecognitionPokemonImages(self,crop_frame) -> list[str]:
+    def RecognitionPokemonImages(self, crop_frame) -> tuple[list, list, list, list]:
         """
-        Arg:
-        crop_frame:手持ちリストの切り抜き画像
+        手持ちの画像を6枚に分割する
         Return:
         keylist:図鑑番号
         dislist:編集距離
@@ -40,17 +39,19 @@ class PkHash:
         cutframelist = []
         outline_iconllist = []
         for i in range(0, 6):
-            y: int = int(height / 6 * i)
+            y = int(height / 6 * i)
             cut_frame = crop_frame[y:y+img_pokemon_height, 0:width]
             cutframelist.append(cut_frame)
             outline_frame = self.GetImageByAllContours(cut_frame)
+            cv2.imwrite("debug.outline.jpg", outline_frame)
+            # BUG: 輝度が高いとうまくいかない可能性がある
             outline_iconllist.append(outline_frame)
             key, distance = self.GetPokemonNameFromImage(outline_frame)
             keylist.append(key)
             dislist.append(distance)
         return keylist, dislist, cutframelist, outline_iconllist
 
-    def GetPokemonNameFromImage(self,img) -> str:
+    def GetPokemonNameFromImage(self, img) -> str:
         """
         輪郭短形で切り出したポケモン画像と最もdHash値が近い画像を探す
         Arg:
@@ -108,14 +109,16 @@ class PkHash:
 
         return dhash
 
-    def GetImageByAllContours(self,img):
+    def GetImageByAllContours(self, img):
         # FIXME: フレーム上下の境界ラインが接触してしまい、トリミングに失敗する場合がある
         """
         画像内の全ての輪郭に外接する長方形を切り出す
         """
         self.logger.debug("Execute GetImageByAllContours")
+        
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        _, binary_img = cv2.threshold(gray, 130, 255, cv2.THRESH_BINARY_INV)
+        # 閾値が低いと、輝度の高いポケモンのアイコンを認識しなくなる
+        _, binary_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
         cv2.waitKey(0)
         contours = self.FindContours(binary_img)
 
@@ -138,7 +141,7 @@ class PkHash:
         # 輪郭の抽出
         # cv2.RETR_EXTERNAL = 最も外側の輪郭のみ抽出する
         # cv2.CHAIN_APPROX_SIMPLE = 必要最小限の点を検出する
-        contours, hierarchy = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         return contours
 
 def debug_PkCSV():
