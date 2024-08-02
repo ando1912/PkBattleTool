@@ -1,3 +1,4 @@
+import os, sys
 import cv2 as cv
 from PIL import Image, ImageTk
 import threading
@@ -5,7 +6,7 @@ import datetime
 from logging import getLogger
 
 from module import config
-
+PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 class CameraCapture:
     def __init__(self):
         self.logger = getLogger("Log").getChild("CameraCapture")
@@ -35,27 +36,22 @@ class CameraCapture:
 
 
     def start_capture(self):
-        self.logger.debug("Execute start_capture")
+        self.logger.info("Execute start_capture")
         self.is_capturing= True
         self.capture_thread = threading.Thread(target=self.capture_video)
         self.capture_thread.start()
     
     def stop_capture(self):
-        self.logger.debug("Execute stop_capture")
+        self.logger.info("Execute stop_capture")
         self.is_capturing = False
-        if self.capture_thread and self.capture_thread.is_alive():
-            self.capture_thread.join()
     
     def capture_video(self):
-        self.logger.debug("Execute capture_video")
+        self.logger.info("Execute capture_video")
         # print("capture_videを実行")
         while self.is_capturing:
-            # print("capture videを実行中")
             ret, frame = self.vid.read()
             if ret:
-                # print("フレームに格納")
                 self.frame = frame
-                # cv.imshow("text",frame)
         
     def get_frame(self):
         # ループ内処理のためログ出力は割愛
@@ -64,8 +60,15 @@ class CameraCapture:
 
     def save_frame(self):
         self.logger.debug("Execute save_frame")
-        file_name = "{}/screenshot_{}".format(self.screenshot_folder_path,datetime.datetime.now().strftime("%y%m%d%H%M%S") )
-        cv.imwrite("{}.jpg".format(file_name),self.frame)
+        # screenshot保存フォルダがなかった場合にフォルダを作成する
+        try:
+            if os.path.exists(f"{PATH}/{self.screenshot_folder_path}"):
+                os.mkdir(f"{PATH}/{self.screenshot_folder_path}")
+                self.logger.info(f"Success makedir {self.screenshot_folder_path}")
+        except:
+            self.logger.error(f"Fault makedir {self.screenshot_folder_path}")
+        file_name = f"screenshot_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}"
+        cv.imwrite(f"{PATH}/{self.screenshot_folder_path}/{file_name}.png")
         print("save as {}".format(file_name))
 
     def convert_frame_to_photo(self):
@@ -74,7 +77,7 @@ class CameraCapture:
         return ImageTk.PhotoImage(image=Image.fromarray(frame))
 
     def release(self):
-        self.logger.debug("Execute release")
+        self.logger.info("Execute release")
         if self.vid.isOpened():
             self.vid.release()
     
