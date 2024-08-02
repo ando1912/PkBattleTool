@@ -1,7 +1,10 @@
+import os, sys
 import cv2
 from logging import getLogger
 
 from mylib import CameraCapture
+
+PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class CameraFrameForge():
     """
