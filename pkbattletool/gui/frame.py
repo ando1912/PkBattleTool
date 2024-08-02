@@ -17,7 +17,7 @@ from logging import getLogger
 
 from .subwindow import SubWindow
 from module import config, pkcsv
-from mylib import CameraCapture, SearchDB, CameraControl, PkTypeCompatibility, PkHash, CameraFrameForge, OcrRunner
+from mylib import CameraCapture, SearchDB, CameraControl, PkTypeCompatibility, PkHash, CameraFrameForge, OcrRunner, OcrControl
 
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
@@ -63,9 +63,6 @@ class PKInfo(tk.Frame):
 
         self.button_searchname.grid(row=0,column=2,padx=2,pady=2,sticky=tk.W+tk.E+tk.N+tk.S)
         self.button_searchdb.grid(row=1,column=2,padx=2,pady=2,sticky=tk.W+tk.E+tk.N+tk.S)
-
-        # self.ocrloop_update()
-
 
     def func_search_name(self):
         """
@@ -117,44 +114,84 @@ class PKInfo(tk.Frame):
 
 # OCRを利用して、現在の相手のポケモンを表示する(開発中)
 class PkInfo2(tk.Frame):
-    def __init__(self, master:tk, ocr_runnner:OcrRunner, **kwargs):
+    def __init__(self, master:tk, camera_capture:CameraCapture, **kwargs):
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("PKInfo2")
-        self.logger.debug("Hello PkInfo2")
+        self.logger.info("Called PkInfo2")
         
-        self.ocr_runner = ocr_runnner
+        self.camera_capture = camera_capture
+        
+        # OCR制御
+        self.ocr_control = {
+            "level":OcrControl(OcrRunner(self.camera_capture, "level")),
+            "namebox":OcrControl(OcrRunner(self.camera_capture, "namebox"))
+        }
         
         self.font = ("MS ゴシック", 15)
+        
         # ウェジット定義
-        self.label_name = tk.Label(self, text = "名前", font=self.font, padx=2, pady=2)
+        
+        self.label_name = tk.Label(self, text = "名前", font=self.font, padx=2, pady=2)  # ポケモン名のラベル列
         self.label_index = tk.Label(self, text="図鑑No",font=self.font, padx=2, pady=2)
         self.label_type1 = tk.Label(self, text="タイプ1", font=self.font, padx=2, pady=2)
         self.label_type2 = tk.Label(self, text="タイプ2", font=self.font, padx=2, pady=2)
 
-        # self.entry_name = tk.Entry(self, font=self.font) 入力
-        self.label_value_name = tk.Label(self, font=self.font, padx=2, pady=2)
+        self.label_value_name = tk.Label(self, width=40, font=self.font, padx=2, pady=2)
         self.label_value_index = tk.Label(self,font=self.font, padx=2, pady=2)
         self.label_value_type1 = tk.Label(self,font=self.font, padx=2, pady=2)
         self.label_value_type2 = tk.Label(self,font=self.font, padx=2, pady=2)
 
-        # self.button_searchname = tk.Button(self, text="検索", command=self.func_search_name)
         self.button_searchdb = tk.Button(self, text="使用率ランキングを検索",command=self.func_searchdb)
 
         # ウェジット配置
-        # self.entry_name.grid(row=0,column=0, columnspan=2,sticky=tk.W+tk.E)
         self.label_name.grid(row=1,column=0,sticky=tk.W+tk.E)
-        self.label_value_name.grid(row=1,column=1,sticky=tk.W+tk.E)
         self.label_index.grid(row=2,column=0,sticky=tk.W+tk.E)
-        self.label_value_index.grid(row=2,column=1,sticky=tk.W+tk.E)
         self.label_type1.grid(row=3,column=0,sticky=tk.W+tk.E)
-        self.label_value_type1.grid(row=3,column=1,sticky=tk.W+tk.E)
         self.label_type2.grid(row=4,column=0,sticky=tk.W+tk.E)
-        self.label_value_type2.grid(row=4,column=1,sticky=tk.W+tk.E)
+        
+        self.label_value_name.grid(row=1,column=1,sticky="EW")
+        self.label_value_index.grid(row=2,column=1,sticky="EW")
+        self.label_value_type1.grid(row=3,column=1,sticky="EW")
+        self.label_value_type2.grid(row=4,column=1,sticky="EW")
 
-        # self.button_searchname.grid(row=0,column=2,padx=2,pady=2,sticky=tk.W+tk.E+tk.N+tk.S)
-        self.button_searchdb.grid(row=1,column=2,padx=2,pady=2,sticky=tk.W+tk.E+tk.N+tk.S)
+        self.button_searchdb.grid(row=4,column=2,padx=2,pady=2,sticky=tk.W+tk.E+tk.N+tk.S)
+        
+        self.func_check_leveltext()
 
-
+    def func_check_leveltext(self):
+        self.logger.debug("Run check_leveltext()")
+        if self.camera_capture.is_capturing: # カメラが有効の場合
+            self.logger.debug("Camera is True")
+            if not self.ocr_control["level"].activemode: #OCRが無効の場合
+                self.logger.debug("OCRを起動")
+                self.ocr_control["level"].start_ocr_thread() # OCRを起動
+            
+            level_text = self.ocr_control["level"].get_ocrtext()
+            self.logger.debug("Got ocr-text")
+            
+            # 文字認識制度が甘い
+            if level_text is not None and "Lv" in level_text:
+                self.logger.info("Detected Namebox")
+                if not self.ocr_control["namebox"].activemode:
+                    self.ocr_control["namebox"].start_ocr_thread() # OCRを起動
+                name_text = self.ocr_control["namebox"].get_ocrtext()
+                self.label_value_name["text"] = f"{level_text} |  {name_text}"
+            else:
+                if self.ocr_control["namebox"].activemode: # OCRが有効の場合
+                    self.logger.debug("OCRを停止")
+                    self.ocr_control["namebox"].stop_ocr_thread()
+            
+        else: # カメラが無効の場合
+            if self.ocr_control["level"].activemode: # OCRが有効の場合
+                self.logger.debug("OCRを停止")
+                self.ocr_control["level"].stop_ocr_thread()
+            if self.ocr_control["namebox"].activemode: # OCRが有効の場合
+                self.logger.debug("OCRを停止")
+                self.ocr_control["namebox"].stop_ocr_thread()
+        
+        self.after(2000, self.func_check_leveltext)
+        
+    # UI表記の更新
     def func_update_status(self, index, name, type1, type2):
         """
         番号、名前、タイプ1、タイプ2を引数として与え、UIを更新する
@@ -166,27 +203,20 @@ class PkInfo2(tk.Frame):
         self.label_value_type2["text"] = type2
 
     def func_searchdb(self):
-        """DBを検索"""
+        """ポケモンバトルDBを検索"""
         self.logger.debug("Execute func_searchdb")
         name = self.label_value_name["text"]
         SearchDB().searchdb(name)
 
-    # OCRをアップデート
-    def ocrloop_update(self):
-        if self.ocr_runner.is_ocr_running:
-            text = self.ocr_runner.text
-            result_df = self.pkhash.name_search2csv(text)
-            if isinstance(result_df, pd.DataFrame):
-                name = result_df.at[result_df.index[0],"name"]
-                index = result_df.index[0]
-                type1 = result_df.at[result_df.index[0],"type1"]
-                type2 = result_df.at[result_df.index[0],"type2"]
-                self.func_update_status(index, name, type1, type2)
-                if not name in self.master.frame2.pokemonlist:
-                    self.func_addlist()
-
-        self.after(1000, self.ocrloop_update)
-        
+    def func_update_status(self, index, name, type1, type2):
+        """
+        番号、名前、タイプ1、タイプ2を引数として与え、UIを更新する
+        """
+        self.logger.debug("Execute func_update_status")
+        self.label_value_name["text"] = name
+        self.label_value_index["text"] = index
+        self.label_value_type1["text"] = type1
+        self.label_value_type2["text"] = type2
 
 class CaptureControl(tk.Frame):
     """
@@ -200,7 +230,7 @@ class CaptureControl(tk.Frame):
         """
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("CaptureControl")
-        self.logger.debug("Hello CaptureControl")
+        self.logger.info("Called CaptureControl")
 
         self.camera_control = CameraControl(camera_capture)
 
