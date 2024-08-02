@@ -16,7 +16,6 @@ rcParams["font.sans-serif"] = ["Meiryo"]
 
 from logging import getLogger
 
-from .subwindow import SubWindow
 from module import config, pkcsv
 from mylib import CameraCapture, SearchDB, CameraControl, PkTypeCompatibility, PkHash, CameraFrameForge, OcrRunner, OcrControl
 
@@ -339,7 +338,6 @@ class CanvasPkBox(tk.Frame):
         self.pkhash = PkHash()
         self.imgf = CameraFrameForge(camera_capture,"pokemonbox")
 
-        # dhash値でポケモンリストを自動認識する
         self.screenshot_folder_path = config.get("DEFAULT","screenshot_folder")
 
         # サブフレームを6つ作成
@@ -368,7 +366,6 @@ class CanvasPkBox(tk.Frame):
         self.canvas_frame.pack(fill=tk.BOTH, expand=True)
         self.button_save_pkbox.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
 
-
         self.update_pkbox()
 
     def update_pkbox(self):
@@ -376,10 +373,10 @@ class CanvasPkBox(tk.Frame):
             カメラ映像からポケモンリストの画像の取得
             CanvasPkBox.updateを実行
             """
+            # FIXME:テキスト取得から画像の取得まで時間がかかることで、画面変化のタイミングでリストが更新される場合がある
             self.logger.debug("Execute update_pkbox")
             # print("CanvasPkBox.updateを実行")
             if self.camera_capture.is_capturing: # カメラが有効だった場合
-                # TODO:選出画面時のみに撮影
                 if not self.ocr_control.activemode: # OCRが無効化されていたら有効化する
                     self.ocr_control.start_ocr_thread()
                 
@@ -388,6 +385,7 @@ class CanvasPkBox(tk.Frame):
                 
                 # 文字列の類似度計算
                 if text is not None:
+                    # TODO:カジュアルバトルにも対応させる
                     similar_val = Levenshtein.distance(text, "ランクバトル")
                     self.logger.debug(f"OCR read {text}({similar_val})")
                 else:
@@ -397,21 +395,7 @@ class CanvasPkBox(tk.Frame):
                     camera_frame = self.camera_capture.get_frame()
                     if camera_frame is not None:
                         crop_frame = self.imgf.crop_frame(camera_frame)
-                        # 手持ち選出の判定をボックスの黒白の割合で検出
-                        # 画面上の文字認識でトリガー化したため削除予定
-                        # binaly_frame = self.imgf.binaly_frame(self.imgf.grayscale_frame(crop_frame))
-                        # size = binaly_frame.size
-                        # white = cv2.countNonZero(binaly_frame)
-                        # whiteAreaRatio = (white/size)*100
-                        # blackAreaRatio = 100-whiteAreaRatio
-                        # print("White:"+str(whiteAreaRatio) +"[%]\nBlack:" + str(blackAreaRatio)+"[%]")
-                        # self.logger.debug(f"White:{whiteAreaRatio:2f}[%]")
-                        # self.logger.debug(f"Black:{blackAreaRatio:2f}[%]")
-                        # if whiteAreaRatio > 60 and whiteAreaRatio < 70:
                         
-                        # デバッグ
-                        # cv2.imwrite("debug.jpg", crop_frame)
-                        # self.logger.info(type(crop_frame))
                         self.func_save_pkbox(crop_frame)
             
             else: # カメラが無効化されていた場合の処理
@@ -441,7 +425,7 @@ class CanvasPkBox(tk.Frame):
 
             date = datetime.datetime.now().strftime("%y%m%d%H%M%S")
             folder_path = f"{PATH}/{self.screenshot_folder_path}/frame/"
-            filename = "screenshot_{date}.png"
+            filename = f"screenshot_{date}.png"
             # filename2 = f"{PATH}/{self.screenshot_folder_path}/frame/dhash_{date}.json"
             try:
                 if not os.path.exists(folder_path):
@@ -449,7 +433,7 @@ class CanvasPkBox(tk.Frame):
                     self.logger.info(f"Success makedir {folder_path}")
             except:
                 self.logger.error(f"Fault makedir {folder_path}")
-            cv2.imwrite(f"{filename}",self.crop_frame)
+            cv2.imwrite(f"{folder_path}{filename}",self.crop_frame)
             # self.save_dhash(filename2, self.crop_frame)
             self.cash_frame = self.crop_frame # キャッシュのコピー
 
@@ -462,10 +446,15 @@ class CanvasPkBox(tk.Frame):
 
             # アイコン画像の保存
             for i in range(0,6):
-                cv2.imwrite(f"{PATH}/icon/outline/{date}_{i}.png",self.outline_iconlist[i])
+                if not os.path.exists(f"{PATH}/{self.screenshot_folder_path}/icon/outline"):
+                    os.mkdir(f"{PATH}/{self.screenshot_folder_path}/icon/outline")
+                if not os.path.exists(f"{PATH}/{self.screenshot_folder_path}/icon/outline"):
+                    os.mkdir(f"{PATH}/{self.screenshot_folder_path}/icon/binary")
+                
+                cv2.imwrite(f"{PATH}/{self.screenshot_folder_path}/icon/outline/{date}_{i}.png",self.outline_iconlist[i])
                 gray = cv2.cvtColor(self.outline_iconlist[i], cv2.COLOR_BGR2GRAY)
                 _, binary_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
-                cv2.imwrite(f"{PATH}/icon/binary/{date}_{i}.png",binary_img)
+                cv2.imwrite(f"{PATH}/{self.screenshot_folder_path}/icon/binary/{date}_{i}.png",binary_img)
                 self.logger.debug(f"Write {PATH}/icon/outline/{date}_{i}.png")
 
             # 表示の更新
@@ -490,12 +479,12 @@ class CanvasPkBox(tk.Frame):
             self.pkbox_subframe_list[i].update_subpkbox()
 
 class SubFrame_PkBox(tk.Frame):
-    # TODO: ポケモンの画像から、データベースの検索やポケ徹の検索ができるようにする
-    # TODO: タイプを確認できるようにする
-    # TODO: 名前などを表示していない状態でも、空間サイズを固定
     """
     ポケモンの画像と名前をセットにしたサブフレーム
     """
+    # TODO: ポケモンの画像から、データベースの検索やポケ徹の検索ができるようにする
+    # TODO: タイプを確認できるようにする
+    # TODO: 名前などを表示していない状態でも、空間サイズを固定
     def __init__(self, master:tk, **kwargs):
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("SubFrame_PkBox")
@@ -505,56 +494,48 @@ class SubFrame_PkBox(tk.Frame):
 
         self.root = master
 
-        self.cut_frame = cv2.imread("monsterball.png") # 切り出し画像(初期画像はモンスターボール)
-        self.outline_iconframe = None # 輪郭切り取り画像
+        self.key = None # ポケモンの識別ID
+        self.pokemon_name = "" # ポケモン名
+        self.pokemon_form = "" # ポケモンのフォルム
+
+        self.cut_frame = cv2.imread(f"{PATH}/monsterball.png") # 切り出し画像(初期画像はモンスターボール)
+        self.outline_iconframe = None # ポケモンの輪郭切り取り画像
+        
+        self.search_distance = 0 # 検索時の類似度
+        
         self.source_image = None # キャンバス描画用
         self.photo_image = None # キャンバス描画用
-        
-        self.pokemon_name = ""
-        self.pokemon_form = ""
-        self.key = None
-        self.search_distance = 0
 
         # 画像の明度
         self.brightness_factor = -50
 
         self.canvas_pokemon = tk.Canvas(self)
         self.canvas_pokemon.configure(width=106, height=101, bg="gray")
-
-        # # ソース画像を取得する部分
-        # self.source_image = cv2.cvtColor(cv2.convertScaleAbs(cv2.imread("monsterball.png"), beta=self.brightness_factor), cv2.COLOR_BGR2RGB)
-        # # ImageTk.PhotoImageを作成する部分
-        # self.photo_image = ImageTk.PhotoImage(image=Image.fromarray(self.source_image))
-        # # canvasにイメージを作成する部分
-        # self.canvas_pokemon.create_image(0, 0, anchor=tk.NW, image=self.photo_image) 
-        
-        self.label_name = tk.Label(self, text="名前\t：", anchor=tk.W)
-        self.label_form = tk.Label(self, text="フォルム\t：", anchor=tk.W)
-        self.label_distance = tk.Label(self, text="類似度\t：", anchor=tk.W)
-        self.label_value_name = tk.Label(self, text="", width=10, anchor=tk.W)
-        self.label_value_form = tk.Label(self, text="", width=10, anchor=tk.W)
-        self.label_value_distance = tk.Label(self, text="", width=10, anchor=tk.W)
-
-        self.clickmenu = ClickMenu(self)
-
         self.canvas_pokemon.grid(row=0,column=0,rowspan=3, sticky=tk.W+tk.E)
+
+        # 表示テキスト
+        self.label_name = tk.Label(self, text="名前\t：", anchor=tk.W)
         self.label_name.grid(row=0,column=1, sticky=tk.W)
+        self.label_form = tk.Label(self, text="フォルム\t：", anchor=tk.W)
         self.label_form.grid(row=1,column=1, sticky=tk.W)
+        self.label_distance = tk.Label(self, text="類似度\t：", anchor=tk.W)
         self.label_distance.grid(row=2,column=1, sticky=tk.W)
+        self.label_value_name = tk.Label(self, text="", width=15, anchor=tk.W)
         self.label_value_name.grid(row=0,column=2, sticky=tk.W)
+        self.label_value_form = tk.Label(self, text="", width=15, anchor=tk.W)
         self.label_value_form.grid(row=1, column=2, sticky=tk.W)
+        self.label_value_distance = tk.Label(self, text="", width=15, anchor=tk.W)
         self.label_value_distance.grid(row=2, column=2, sticky=tk.W)
 
+
         # 右クリックしたときのメニュー
+        self.clickmenu = ClickMenu(self)
+        
         self.context_menu = tk.Menu(self, tearoff=0)
-        self.context_menu.add_command(label="Hashを追加",command=lambda:
-                                      self.clickmenu.addHashData(self.cut_frame))
-        self.context_menu.add_command(label="Hashを更新",command=lambda:
-                                      self.clickmenu.updateHashData(self.key, self.cut_frame))
-        self.context_menu.add_command(label="DBを検索", command=lambda:
-                                      self.clickmenu.searchDB(self.pokemon_name))
-        self.context_menu.add_command(label="詳細を表示", command=lambda:
-                                      self.clickmenu.viewInfo(self.key, self.cut_frame))
+        self.context_menu.add_command(label="Hashを追加",command=lambda:self.clickmenu.addHashData(self.cut_frame))
+        self.context_menu.add_command(label="Hashを更新",command=lambda:self.clickmenu.updateHashData(self.key, self.cut_frame))
+        self.context_menu.add_command(label="DBを検索", command=lambda:self.clickmenu.searchDB(self.pokemon_name))
+        self.context_menu.add_command(label="詳細を表示", command=lambda:self.clickmenu.viewInfo(self.key, self.cut_frame))
 
         # 右クリックした時のイベント
         self.canvas_pokemon.bind("<Button-3>", self.on_canvas_right_click)
@@ -565,14 +546,17 @@ class SubFrame_PkBox(tk.Frame):
     
     def on_canvas_right_click(self,event):
         """
-        キャンバス上で右クリックした際のイベント
+        キャンバス上で右クリックした時のイベント
+        メニューを表示
         """
         self.logger.debug("Execute on_canvas_right_click")
         self.context_menu.post(event.x_root, event.y_root)
 
     def on_canvas_left_click(self, event):
+        """
+        キャンバス上で左クリックした時のイベント
+        """
         self.logger.debug("Execute on_canvas_left_click")
-        # print("switch bright")
      
         if self.cut_frame is not None and self.cut_frame.size > 0:
             if self.brightness_factor == 0:
@@ -612,7 +596,6 @@ class SubFrame_PkBox(tk.Frame):
 
 class ClickMenu:
     # TODO: ウィンドウを開く位置をメインウィンドウに合わせる
-    # TODO: 右クリックメニューからポケモンバトルデータベースへの検索を実施
     def __init__(self, master:tk):
         self.root = master
 
@@ -633,7 +616,6 @@ class ClickMenu:
         csvの追加処理
         """
         self.logger.debug("Execute addHashData")
-        # self.pokemon_df = self.pkhash.pokemon_df
         self.cut_frame = cut_frame
         self.outline_frame = self.pkhash.GetImageByAllContours(self.cut_frame)
 
@@ -732,39 +714,26 @@ class ClickMenu:
         self.logger.debug(f"dHash has Update {self.pokemon_df.at[key,'Name']}")
 
     def searchDB(self, pokemon_name):
+        """
+        ポケモンバトルデータベースの検索
+        """
         self.logger.debug("Execute searchDB")
         self.searchdb.searchdb(pokemon_name)
     
     def viewInfo(self, key, cut_frame):
-        # subwindow = SubWindow(self.root.master.master.master)
-        # subwindow.view_pkinfo(key)
-        # メインウィンドウの座標計算
+        """
+        ポケモン情報の表示
+        """
         
         # ポケモン情報を表示するウィンドウ
         self.logger.debug("Execute view_pkinfo")
-        # try:
-        #     self.cut_frame = cv2.imread(f"icon/box/{key}.png")
-        #     #cv2.imshow("debug", self.cut_frame)
-        #     height, width, channels = self.cut_frame.shape[:3]
-        #     self.logger.debug(f"Load icon/box/{key}.png, Image size:{height}x{width}")
-        # except:
-        #     self.cut_frame = cv2.imread("monsterball.png")
-        #     self.logger.debug("Load monsterball.png")
+
         self.cut_frame = cut_frame
         pktype = PkTypeCompatibility()
         self.sub_window = tk.Toplevel(self.root)
         self.sub_window.title("ポケモン情報")
 
         pokemon_series = pkcsv.get_series(key)
-        
-        width = 600
-        height = 400
-
-        # self.sub_window.geometry("{}x{}+{}+{}".format(
-        #     width,
-        #     height,
-        #     int(self.root_x+self.root_width/2-width/2),
-        #     int(self.root_y+self.root_height/2-height/2)))
 
         # メインフレーム
         self.frame = tk.Frame(self.sub_window)
@@ -783,7 +752,7 @@ class ClickMenu:
         self.image_tk = ImageTk.PhotoImage(image=self.image_pil)
         # canvasにイメージを作成する部分
         self.canvas_pokemon.create_image(0, 0, anchor=tk.NW, image=self.image_tk)
-        self.canvas_pokemon.update_idletasks() 
+        self.canvas_pokemon.update_idletasks()
         # time.sleep(0.1)
 
         self.label_name = tk.Label(self.frame_baseinfo, text="名前")
