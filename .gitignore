@@ -162,6 +162,8 @@ cython_debug/
 #.idea/
 
 # local_file
+log/
+screehshot/
 outline/
 binary/
 log.txt
