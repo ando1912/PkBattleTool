@@ -281,20 +281,25 @@ class CanvasGame(tk.Frame):
 
         self.width = int(config.get("DEFAULT","display_width"))
         self.height = int(config.get("DEFAULT","display_height"))
-        self.logger.debug(f"Display_size:{self.width}x{self.height}")
+        self.logger.debug(f"Display_size : {self.width}x{self.height}")
 
+        self.default_image = cv2.imread(f"{PATH}/resources/wait_image.png")
+        self.default_image = cv2.resize(self.default_image, (self.width, self.height))
 
         self.label_title = tk.Label(self, text="画面キャプチャ")
         self.canvas_img = tk.Canvas(self)
         self.canvas_img.configure(width = self.width, height = self.height, bg="gray")
 
         self.label_title.grid(row=0)
-        self.canvas_img.grid(row=1)#, padx=5, pady=5)
+        self.canvas_img.grid(row=1)
 
         # キャンバスサイズの初期化
         self.canvas_img.update()
         self.canvas_width = self.canvas_img.winfo_width()
         self.canvas_height = self.canvas_img.winfo_height()
+
+        # デフォルト画面の設定
+        self.set_default()
 
         self.loop_update()
 
@@ -308,19 +313,28 @@ class CanvasGame(tk.Frame):
             frame = self.camera_capture.get_frame()
 
             if frame is not None:
-                # self.logger.debug("Frame is not None")
-                # self.ocr_frame.frame = frame
 
                 frame = cv2.resize(frame, (self.width, self.height))
 
                 self.photo = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
-                self.canvas_img.delete()
+                self.canvas_img.delete("all")
                 self.canvas_img.create_image(0, 0, anchor=tk.NW, image=self.photo)
             else:
                 self.logger.debug("Frame is None")
-                self.canvas_img.delete()
+                #self.canvas_img.delete()
+        else:
+            self.set_default()
 
         self.after(10, self.loop_update)
+    
+    def set_default(self):
+        """
+        デフォルト画像をcanvasにセットする
+        """
+        frame = self.default_image
+        self.photo = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
+        self.canvas_img.delete("all")
+        self.canvas_img.create_image(0, 0, anchor=tk.NW, image=self.photo)
 
 class CanvasPkBox(tk.Frame):
     """
@@ -465,9 +479,11 @@ class CanvasPkBox(tk.Frame):
         フレームの再読み込み
         """
         self.logger.debug("Execute func_reload_pkbox")
-
-        self.keylist, self.dislist, self.cutframelist, self.outline_iconlist = self.pkhash.RecognitionPokemonImages(self.crop_frame)
-
+        try:
+            self.keylist, self.dislist, self.cutframelist, self.outline_iconlist = self.pkhash.RecognitionPokemonImages(self.crop_frame)
+        except:
+            self.logger.error("Fault RecognitionPokemonImages")
+            return
         for i in range(0,6):
             pokemon_series = pkcsv.get_series(self.keylist[i])
             self.pkbox_subframe_list[i].key = self.keylist[i]
@@ -498,7 +514,7 @@ class SubFrame_PkBox(tk.Frame):
         self.pokemon_name = "" # ポケモン名
         self.pokemon_form = "" # ポケモンのフォルム
 
-        self.cut_frame = cv2.imread(f"{PATH}/monsterball.png") # 切り出し画像(初期画像はモンスターボール)
+        self.cut_frame = cv2.imread(f"{PATH}/resources/monsterball.png") # 切り出し画像(初期画像はモンスターボール)
         self.outline_iconframe = None # ポケモンの輪郭切り取り画像
         
         self.search_distance = 0 # 検索時の類似度
@@ -550,7 +566,11 @@ class SubFrame_PkBox(tk.Frame):
         メニューを表示
         """
         self.logger.debug("Execute on_canvas_right_click")
-        self.context_menu.post(event.x_root, event.y_root)
+        if self.key is None:
+            self.logger.info("Not Pokemon info")
+            return
+        else:
+            self.context_menu.post(event.x_root, event.y_root)
 
     def on_canvas_left_click(self, event):
         """
