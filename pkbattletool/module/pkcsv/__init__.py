@@ -91,13 +91,18 @@ class PkCSV:
         """
         logger = self.logger.getChild("analyze_name")
         logger.info("Call analyze_name")
-        if name is not None or name is not "":
+        if name is not None and name != "":
             print("analyze_name={}".format(name))
             logger.debug(f"Analyze name is \"{name}\"")
-            index_distance = 0
-            index_ratio = 0
+            # index_distance:int = 0
+            # index_ratio:int = 0
+            # min_distance:int = 99
+            # max_ratio:int = 0
+            
             min_distance = 99
             max_ratio = 0
+            min_distance_Key = None
+            max_ratio_Key = None
 
             for Key, row in self.pokemon_df.iterrows():
                 # print(index)
@@ -113,8 +118,10 @@ class PkCSV:
                     max_ratio_Key = Key
 
             # 編集距離と類似度分析でのインデックスが一致
-            if index_distance == index_ratio:
-                return self.pokemon_df[max_ratio_Key:max_ratio_Key]
+            # if index_distance == index_ratio:
+            #     return self.pokemon_df[max_ratio_Key:max_ratio_Key]
+            if min_distance_Key == max_ratio_Key:
+                return self.pokemon_df.iloc[max_ratio_Key]
             else:
                 return None
 
