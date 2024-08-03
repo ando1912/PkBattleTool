@@ -68,8 +68,11 @@ class CameraCapture:
         except:
             self.logger.error(f"Fault makedir {self.screenshot_folder_path}")
         file_name = f"screenshot_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}"
-        cv.imwrite(f"{PATH}/{self.screenshot_folder_path}/{file_name}.png")
-        print("save as {}".format(file_name))
+        try:
+            cv.imwrite(f"{PATH}/{self.screenshot_folder_path}/{file_name}.png", self.frame)
+            print("save as {}".format(file_name))
+        except:
+            self.logger.error("Fault save image")
 
     def convert_frame_to_photo(self):
         self.logger.debug("Execute convert_frame_to_photo")
