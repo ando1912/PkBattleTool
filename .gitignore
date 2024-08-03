@@ -169,3 +169,4 @@ binary/
 log.txt
 *.old
 *.old2
+*.code-workspace
