@@ -13,8 +13,14 @@ def gui_main():
     # TODO: ウィンドウを開く位置を前回の位置にしたい
     root = tk.Tk()
     root.withdraw() # ウィンドウを非表示にする
-    width = 1400
-    height = 900
+    
+    # アイコンの設定
+    # 参考；https://qiita.com/KMiura95/items/cae599efa8a908a4bb01
+    root.iconbitmap(
+        default=f"{PATH}/resources/icon.ico"
+    )
+    
+    root.resizable(0,0) # ウィンドウサイズ変更の禁止
     
     # ウィンドウタイトル
     root.title("ポケモン対戦支援ツール")
