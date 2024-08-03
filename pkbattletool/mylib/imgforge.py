@@ -11,14 +11,13 @@ class CameraFrameForge():
     ゲーム画面の切り抜きに関するクラス
     option:message/namebox/pokemonbox
     """
-    def __init__(self,camera_capture:CameraCapture, option:str) -> None:
+    def __init__(self,camera_capture:CameraCapture) -> None:
         self.logger = getLogger("Log").getChild("CameraFrameForge")
         self.logger.debug("Hello CameraFrameForge")
 
         self.width = int(camera_capture.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(camera_capture.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.option = option
-        self.optionlist = {
+        self.options = {
             "message":{
                 "top":int(self.height/14*10),
                 "bottom":int(self.height/14*12),
@@ -51,9 +50,8 @@ class CameraFrameForge():
                 "thresh":200}
             }
 
-        self.frame_option = self.optionlist[self.option]
 
-    def crop_frame(self, frame):
+    def crop_frame(self, frame, option:str):
         """
         画像の切り出し
         Return
@@ -61,10 +59,10 @@ class CameraFrameForge():
         """
         logger = self.logger.getChild("crop_frame")
         logger.debug("Execute crop_frame")
-        top = self.frame_option["top"]
-        bottom = self.frame_option["bottom"]
-        left = self.frame_option["left"]
-        right = self.frame_option["right"]
+        top = self.options[option]["top"]
+        bottom = self.options[option]["bottom"]
+        left = self.options[option]["left"]
+        right = self.options[option]["right"]
 
         self.logger.debug(f"top:{top} / bottom:{bottom} / left:{left} / right:{right}")
 
@@ -78,16 +76,17 @@ class CameraFrameForge():
         logger.debug("Execute grayscale_frame")
         return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    def binaly_frame(self,frame):
+    def binaly_frame(self,frame,option:str):
         """
         画像の二値化処理
         """
         logger = self.logger.getChild("binaly_frame")
         logger.debug("Execute binaly_frame")
-        _, binaly_frame = cv2.threshold(frame, self.frame_option["thresh"], 255, cv2.THRESH_BINARY)
+        # _, binaly_frame = cv2.threshold(frame, self.frame_option["thresh"], 255, cv2.THRESH_BINARY)
+        _, binaly_frame = cv2.threshold(frame, self.options[option]["thresh"], 255, cv2.THRESH_BINARY)
         return binaly_frame
     
-    def diff_frames(self, frame_list):
+    def diff_frames(self, frame_list, option:str):
         logger = self.logger.getChild("diff_frames")
         logger.debug("Execute diff_frames")
         base_img = frame_list[0]
@@ -95,7 +94,7 @@ class CameraFrameForge():
             # 画像の差分を計算
             diff = cv2.absdiff(base_img, image)
             # 共通部分のマスクを作成
-            _, mask = cv2.threshold(diff, self.frame_option["thresh"], 255, cv2.THRESH_BINARY_INV)
+            _, mask = cv2.threshold(diff, self.options[option]["thresh"], 255, cv2.THRESH_BINARY_INV)
             base_img = cv2.bitwise_and(base_img, base_img, mask=mask)
         return base_img
     
