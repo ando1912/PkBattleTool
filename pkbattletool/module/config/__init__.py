@@ -37,7 +37,6 @@ class ConfigIni(configparser.ConfigParser):
                 "display_height" : 360}
         
     def print_conf(self):
-        # FIXME: configparserの仕様で、セクションに含まれないキーをDEFAULTから持ってきてしまう
         self.logger.debug("Execuse print_conf")
         cnt = 0
         for section in self:
