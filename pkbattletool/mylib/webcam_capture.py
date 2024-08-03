@@ -62,13 +62,15 @@ class CameraCapture:
             if ret:
                 self.frame = frame
         
-    def get_frame(self) -> cv2.typing.MatLike:
+    def get_frame(self) -> tuple[bool, cv2.typing.MatLike]:
         """カメラの画像を取得する
         
         Returns:
             cv2.typing.MatLike: 画像の行列
         """
-        return self.frame
+        
+        
+        return self.vid.read()
 
     def save_frame(self) -> None:
         """
