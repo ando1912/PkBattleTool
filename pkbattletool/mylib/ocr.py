@@ -1,4 +1,4 @@
-import cv2 as cv
+import cv2
 import os, sys
 import pyocr
 from PIL import Image
@@ -7,8 +7,7 @@ import re
 from logging import getLogger
 
 from module import config
-from imgforge import CameraFrameForge
-
+from . import imgforge
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class OcrRunner:
@@ -28,55 +27,29 @@ class OcrRunner:
         self.option = ocr_option
         self.camera_capture = camera_capture
 
-        self.frame = None
-        self.frame_list = []
+        self.frame_forge = imgforge.CameraFrameForge(camera_capture, ocr_option)
+        
+        self.frame = None # 文字認識を行う画像
+        self.frame_list = [] # マスク処理のための画像リスト
 
-        self.width = int(self.camera_capture.vid.get(cv.CAP_PROP_FRAME_WIDTH))
-        self.height = int(self.camera_capture.vid.get(cv.CAP_PROP_FRAME_HEIGHT))
+        self.width = int(self.camera_capture.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.height = int(self.camera_capture.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         self.list_ocr_option =  {
             # メッセージボックス
             "message":{
-                "top":int(self.height/14*10),
-                "bottom":int(self.height/14*12),
-                "left":int(self.width/8),
-                "right":int(self.width/8*7),
-                "bgr":[230,230,230],
                 "thresh":200
                 },
             "level":{
-                "top":int(self.height*0.045),
-                "bottom":int(self.height*0.082),
-                "left":int(self.width*0.802),
-                "right":int(self.width*0.880),
-                "bgr":[230,230,230],
                 "thresh":100,
                 "lang":"eng"
                 },
             "namebox":{
-                "top":int(self.height*0.091),
-                "bottom":int(self.height*0.130),
-                "left":int(self.width*0.799),
-                "right":int(self.width*0.951),
-                "bgr":[230,230,230],
                 "thresh":180,
                 "lang":"jpn+eng"
                 },
-            "pokemonbox":{
-                "top":int(self.height*0.213),
-                "bottom":int(self.height*0.774),
-                "left":int(self.width*0.642),
-                "right":int(self.width*0.697),
-                "bgr":[230,230,230],
-                "thresh":220
-                },
-            # 選出時の左上のラベルテキスト
             # FIXME:カジュアルバトルの場合もあり、その場合、幅が異なる
             "rankbattle":{
-                "top":int(self.height*0.017),
-                "bottom":int(self.height*0.058),
-                "left":int(self.width*0.075),
-                "right":int(self.width*0.188),
                 "thresh":200,
                 "lang":"jpn"
                 }
@@ -108,30 +81,23 @@ class OcrRunner:
             logger.info("Execute run_ocr_thread")
             # 画像の取得と加工
             frame = self.get_frame() # CameraCaptureからフレームの取得
-            frame = self.cropped_frame(frame) # フレームの切り抜き
+            crop_frame = self.frame_forge.crop_frame(frame) # フレームの切り抜き
             
             # グレースケール変換
-            frame = self.cvt_grayscale_frame(frame)
-            
-            # バイラテラルフィルタでノイズ除去
-            # 参考：https://aijimy.com/dx/python-ocr-technique/
-            # frame = self.cvt_denoised_frame(frame)
-            
+            frame = self.frame_forge.grayscale_frame(crop_frame)
             # 二値化
-            _, frame = self.cvt_binaly_frame(frame)
+            binary_frame = self.frame_forge.binaly_frame(frame)
             
-            self.frame_list.append(frame)
+            self.frame_list.append(binary_frame)
             if len(self.frame_list) > 5: # 5枚以上になったら古いフレームから削除
                 self.frame_list.pop(0)
 
             # フレームの差を求める
-            self.frame = self.calc_diff(self.frame_list)
+            self.frame = self.frame_forge.diff_frames(self.frame_list)
             
             text = self.run_ocr(self.frame)
             self.text = self.normalize_text(text)
             logger.debug(f"OCR result : {self.text}")
-            
-    
 
     def normalize_text(self, text:str) -> str:
         """
@@ -148,60 +114,6 @@ class OcrRunner:
         """
         return  self.camera_capture.get_frame()
 
-    def cropped_frame(self, frame):
-        """
-        画像の切り出し
-        Arg:
-            top(int):上方向の座標
-            bottom(int):下方向の座標
-            left(int):左方向の座標
-            right(int):右方向の座標
-        Return
-            frame:切り出し後のフレーム
-        """
-        # print("run OcrRunner.cropped_img")
-        self.logger.debug("Executecropped_img")
-        top = self.ocr_option["top"]
-        bottom = self.ocr_option["bottom"]
-        left = self.ocr_option["left"]
-        right = self.ocr_option["right"]
-
-        self.logger.debug(f"top:{top} / bottom:{bottom} / left:{left} / right:{right}")
-        # print("top:{}\nbottom:{}\nleft:{}\nright:{}".format(top,bottom,left,right))
-
-        return frame[top:bottom,left:right]
-
-    def cvt_grayscale_frame(self, frame):
-        """
-        画像のグレースケール処理
-        """
-        self.logger.debug("Execute grayscale_img")
-        return cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-
-    def cvt_denoised_frame(self, frame):
-        """
-        画像のノイズ除去
-        """
-        return cv.bilateralFilter(frame, 5, 7, 9)
-
-    def cvt_binaly_frame(self, frame):
-        """
-        画像の二値化処理
-        """
-        self.logger.debug("Execute binaly_img")
-        return cv.threshold(frame, self.ocr_option["thresh"], 255, cv.THRESH_BINARY)
-
-    def calc_diff(self, frame_list):
-        base_img = frame_list[0]
-        for image in frame_list[1:]:
-            # 画像の差分を計算
-            diff = cv.absdiff(base_img, image)
-            # 共通部分のマスクを作成
-            _, mask = cv.threshold(diff, self.ocr_option["thresh"], 255, cv.THRESH_BINARY_INV)
-            base_img = cv.bitwise_and(base_img, base_img, mask=mask)
-        self.logger.debug("Executed calc_diff()")
-        return base_img
-
     def run_ocr(self, frame) -> str:
         if self.tesserac_path not in os.environ["PATH"].split(os.pathsep):
             os.environ["PATH"] += os.pathsep + self.tesserac_path
@@ -214,22 +126,7 @@ class OcrRunner:
             lang=self.ocr_option["lang"],
             builder=pyocr.builders.TextBuilder(tesseract_layout=6))
         
-        # self.logger.debug(f"OCR : {str(text)}")
         return text
-    
-    def save_frame(self, frame=None, filename="ocr_frame.jpg"):
-        """
-        Arg:
-            frame:保存したいフレーム
-            file_name:ファイル名、要拡張子
-        """
-        if frame is None:
-            frame = self.frame
-        try:
-            cv.imwrite("{}".format(filename),frame)
-            self.logger.info(f"Save image to {filename}")
-        except:
-            self.logger.error("Can't save image")
 
 class OcrControl:
     """
@@ -249,20 +146,11 @@ class OcrControl:
         self.ocr_runner.stop_ocr_thread()
         self.activemode = False
         self.logger.getChild("stop_ocr_thread").info("Stop ocr thread")
-    
-    def get_cropped_frame(self):
-        self.ocr_runner.get_frame()
-        self.ocr_runner.cropped_img()
-        return self.ocr_runner.cropped_frame
 
-    def get_binaly_frame(self):
-        self.ocr_runner.get_frame()
-        self.ocr_runner.cropped_img()
-        self.ocr_runner.grayscale_img()
-        self.ocr_runner.binaly_img()
-        return self.ocr_runner.binaly_frame
+    def get_frame(self):
+        self.logger.getChild("get_frame").info("Run get_frame")
+        return self.ocr_runner.frame
 
     def get_ocrtext(self):
-        self.ocr_runner.save_frame(filename=f"ocr_frame_{self.ocr_runner.option}.jpg")
         self.logger.getChild("get_ocrtext").info("Got text")
         return self.ocr_runner.text
