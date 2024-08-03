@@ -3,7 +3,7 @@ import os,sys
 from logging import getLogger, StreamHandler, INFO, DEBUG, Formatter, FileHandler
 
 from mylib import OcrRunner, CameraCapture
-from gui import MenuBar,  PkInfo2, CanvasGame, CaptureControl, CanvasPkBox
+from gui import MenuBar, PkInfo_OCR, CanvasGame, CaptureControl, CanvasPkBox
 
 import datetime
 
@@ -32,7 +32,7 @@ def gui_main():
 
     # フレームウェジットの作成
     # ポケモン情報簡易表示
-    frame_pkinfo = PkInfo2(root, camera_capture, bd=1, relief=tk.SOLID)
+    frame_pkinfo = PkInfo_OCR(root, camera_capture, bd=1, relief=tk.SOLID)
     frame_pkinfo.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
     
     # ゲーム画面
