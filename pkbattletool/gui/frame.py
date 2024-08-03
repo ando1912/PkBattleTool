@@ -744,7 +744,7 @@ class ClickMenu:
         """
         ポケモン情報の表示
         """
-        
+        #FIXME: 種族値をグラフ表示にしたため、ラベル表示のソースは削除していい
         # ポケモン情報を表示するウィンドウ
         self.logger.debug("Execute view_pkinfo")
 
