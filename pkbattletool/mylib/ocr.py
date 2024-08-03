@@ -7,6 +7,7 @@ import re
 from logging import getLogger
 
 from module import config
+from imgforge import CameraFrameForge
 
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
@@ -20,10 +21,9 @@ class OcrRunner:
     """
     # BUG:スレッドを終了しないままウィンドウを閉じるとプロセスが終わらない
     def __init__(self, camera_capture, ocr_option:str):
-        self.logger = getLogger("Log").getChild(f"OcrRunner:{ocr_option}")
+        self.logger = getLogger("Log").getChild(f"OcrRunner({ocr_option})")
         self.logger.info(f"Called OcrRunner:{ocr_option}")
         self.tesserac_path = config.get("DEFAULT","tesseract_path")
-        self.logger = getLogger("Log").getChild("OcrRunner")
 
         self.option = ocr_option
         self.camera_capture = camera_capture
@@ -42,58 +42,44 @@ class OcrRunner:
                 "left":int(self.width/8),
                 "right":int(self.width/8*7),
                 "bgr":[230,230,230],
-                "thresh":200},
-
-            # 相手のレベル
-            # 1920x1080での座標
-            #     top:49
-            #     bottom:89
-            #     left:1540
-            #     right:1690
+                "thresh":200
+                },
             "level":{
                 "top":int(self.height*0.045),
                 "bottom":int(self.height*0.082),
                 "left":int(self.width*0.802),
                 "right":int(self.width*0.880),
                 "bgr":[230,230,230],
-                "thresh":30,
-                "lang":"eng"},
-            # ネームボックス
-            # 1920x1080での座標
-            #     top:98
-            #     bottom:140
-            #     left:1535
-            #     right:1825
+                "thresh":100,
+                "lang":"eng"
+                },
             "namebox":{
                 "top":int(self.height*0.091),
                 "bottom":int(self.height*0.130),
                 "left":int(self.width*0.799),
                 "right":int(self.width*0.951),
                 "bgr":[230,230,230],
-                "thresh":240,
-                "lang":"jpn"},
-            # 選出時のポケモンボックス
-            # 1920x1080での座標
-            #     top:223
-            #     bottom:836
-            #     left:1338
-            #     right:1232
+                "thresh":180,
+                "lang":"jpn+eng"
+                },
             "pokemonbox":{
                 "top":int(self.height*0.213),
                 "bottom":int(self.height*0.774),
                 "left":int(self.width*0.642),
                 "right":int(self.width*0.697),
                 "bgr":[230,230,230],
-                "thresh":220},
+                "thresh":220
+                },
             # 選出時の左上のラベルテキスト
-            # FIX:カジュアルバトルの場合もあり、その場合、幅が異なる
+            # FIXME:カジュアルバトルの場合もあり、その場合、幅が異なる
             "rankbattle":{
                 "top":int(self.height*0.017),
                 "bottom":int(self.height*0.058),
                 "left":int(self.width*0.075),
                 "right":int(self.width*0.188),
                 "thresh":200,
-                "lang":"jpn"}
+                "lang":"jpn"
+                }
             }
 
         self.ocr_option = self.list_ocr_option[ocr_option]
@@ -105,18 +91,21 @@ class OcrRunner:
         self.ocr_name_thread = None
 
     def start_ocr_thread(self):
-        self.logger.info("Execute start_ocr_thread")
+        self.logger.getChild("start_ocr_thread").info("Execute start_ocr_thread")
         self.is_ocr_running = True
         self.ocr_name_thread = threading.Thread(target=lambda:self.run_ocr_thread())
         self.ocr_name_thread.start()
 
     def stop_ocr_thread(self):
-        self.logger.debug("Execute stop_ocr_thread")
+        self.logger.getChild("stop_ocr_thread").info("Execute stop_ocr_thread")
         self.is_ocr_running = False
+        self.frame_list = []
 
     def run_ocr_thread(self):
-        self.logger.info("Execute run_ocr_thread()")
+        logger = self.logger.getChild("run_ocr_thread")
+        
         while self.is_ocr_running:
+            logger.info("Execute run_ocr_thread")
             # 画像の取得と加工
             frame = self.get_frame() # CameraCaptureからフレームの取得
             frame = self.cropped_frame(frame) # フレームの切り抜き
@@ -126,7 +115,7 @@ class OcrRunner:
             
             # バイラテラルフィルタでノイズ除去
             # 参考：https://aijimy.com/dx/python-ocr-technique/
-            frame = self.cvt_denoised_frame(frame)
+            # frame = self.cvt_denoised_frame(frame)
             
             # 二値化
             _, frame = self.cvt_binaly_frame(frame)
@@ -138,15 +127,17 @@ class OcrRunner:
             # フレームの差を求める
             self.frame = self.calc_diff(self.frame_list)
             
-            self.text = self.run_ocr(self.frame)
-            # self.text = self.normalize_text(text)
+            text = self.run_ocr(self.frame)
+            self.text = self.normalize_text(text)
+            logger.debug(f"OCR result : {self.text}")
+            
     
 
-    def normalize_text(self, text):
+    def normalize_text(self, text:str) -> str:
         """
         記号文字などを削除する
         """
-        self.logger.debug("Execute normalize_text")
+        self.logger.getChild("normalize_text").debug("Execute normalize_text")
         return re.compile('[!"#$%&\'\\\\()*+,-./:;<=>?@[\\]^_`{|}~「」〔〕“”〈〉『』【】＆＊・（）＄＃＠。、？！｀＋￥％ 　]').sub("",text)
 
     def get_frame(self):
@@ -211,20 +202,20 @@ class OcrRunner:
         self.logger.debug("Executed calc_diff()")
         return base_img
 
-    def run_ocr(self, frame):
+    def run_ocr(self, frame) -> str:
         if self.tesserac_path not in os.environ["PATH"].split(os.pathsep):
             os.environ["PATH"] += os.pathsep + self.tesserac_path
         tools = pyocr.get_available_tools()
         tool= tools[0]
 
         PIL_Image = Image.fromarray(frame)
-        self.text = tool.image_to_string(
+        text = tool.image_to_string(
             PIL_Image,
             lang=self.ocr_option["lang"],
             builder=pyocr.builders.TextBuilder(tesseract_layout=6))
         
-        self.logger.debug(f"OCR : '{self.text}'")
-        return self.text
+        # self.logger.debug(f"OCR : {str(text)}")
+        return text
     
     def save_frame(self, frame=None, filename="ocr_frame.jpg"):
         """
@@ -245,16 +236,19 @@ class OcrControl:
     OcrRunnerを組み合わせて処理を行う
     """
     def __init__(self, ocr_runner:OcrRunner):
+        self.logger = getLogger("Log").getChild(f"OcrControl({ocr_runner.option})")
         self.ocr_runner = ocr_runner
         self.activemode = False
 
     def start_ocr_thread(self):
         self.ocr_runner.start_ocr_thread()
         self.activemode = True
+        self.logger.getChild("start_ocr_thread").info("Start ocr thread")
 
     def stop_ocr_thread(self):
         self.ocr_runner.stop_ocr_thread()
         self.activemode = False
+        self.logger.getChild("stop_ocr_thread").info("Stop ocr thread")
     
     def get_cropped_frame(self):
         self.ocr_runner.get_frame()
@@ -270,4 +264,5 @@ class OcrControl:
 
     def get_ocrtext(self):
         self.ocr_runner.save_frame(filename=f"ocr_frame_{self.ocr_runner.option}.jpg")
+        self.logger.getChild("get_ocrtext").info("Got text")
         return self.ocr_runner.text

@@ -1,9 +1,6 @@
 import tkinter as tk
 import re
 import cv2
-
-import threading
-
 from logging import getLogger
 
 from module import config
@@ -12,7 +9,7 @@ from module import config
 class MenuBar(tk.Menu):
     # TODO サブウィンドウが表示されていた場合は追加で表示しないようにする
     
-    def __init__(self, master,**kwargs):
+    def __init__(self, master: tk, **kwargs):
         super().__init__(master, **kwargs)
         self.root = master
         master.config(menu=self)
@@ -43,10 +40,11 @@ class MenuBar(tk.Menu):
         # print("終了を選択")
         self.logger.debug("Execute on_exit")
         self.subwindow.create_close_window(self.root)
+        
     def on_versioninfo(self):
-        # print("バージョン情報を選択")
         self.logger.debug("Execute on_versioninfo")
         self.subwindow.create_versioninfo_window()
+    
 
 
 # サブウィンドウ作成
@@ -75,7 +73,7 @@ class SubWindowMenu(tk.Toplevel):
             self.root_width,self.root_height,self.root_x, self.root_y = map(int, match.groups())
 
     # ウィンドウを閉じる
-    def close(self, root):
+    def close(self, root: tk):
         self.logger.debug("Execute close")
         """
         引数として与えたrootを閉じる
@@ -122,7 +120,7 @@ class SubWindowMenu(tk.Toplevel):
         label_creator = tk.Label(frame, text="Create by Ando Ryoga").pack()
         button_close = tk.Button(frame, text="OK", command=lambda:self.close(self.sub_window)).pack()
 
-    def create_close_window(self, master):
+    def create_close_window(self, master: tk):
         """
         終了ウィンドウ
         引数としてメインウィンドウのrootを渡す
@@ -237,9 +235,10 @@ class SubWindowMenu(tk.Toplevel):
         entry_tesseract_path = tk.Entry(frame, width=40)
         entry_tesseract_path.insert(0,config.get("DEFAULT","tesseract_path"))
 
-
-        # 設定更新ボタンを押したときの処理
         def update_config():
+            """
+            環境設定更新の処理
+            """
             self.logger.debug("Execute update_config")
             
             # 環境設定の取得

@@ -56,29 +56,44 @@ class PkCSV:
     def Name_search2csv(self, name:str) -> pd.DataFrame | None:
         """
         ポケモン名をcsvファイルと照合し、合致するデータフレームを返す
+        
         Arg:
-        name:str ポケモンの名前
+            name[str] :  ポケモンの名前
         Return:
-        dataframe|None
+            dataframe|None
         """
-        if not isinstance(name,type(None)):
+        logger = self.logger.getChild("Name_search2csv")
+        logger.info(f"Call Search to csv-data : {name}")
+        
+        if name is None:
+            return
+        else:
             # 図鑑のデータフレーム内に名前が見つかれば、そのまま返す
             if name in self.pokemon_df["Name"].values:
-                return self.pokemon_df[self.pokemon_df["Name"]==name]
+                result_df = self.pokemon_df[self.pokemon_df["Name"]==name]
+                logger.info(f"{name} was found")
+                return result_df
             # 見つからなければ、類似検索をかける
             else:
+                logger.info(f"{name} was not found")
                 return self.analyze_name(name)
+            
+        
     
     def analyze_name(self,name:str) -> pd.DataFrame | None:
         """
         与えられたポケモン名をcsvと照合し、類似する名前のデータフレームを返す
+        
         Arg:
-        name:str 検索したいポケモン名
+            name[str]: 検索したいポケモン名
         Return:
-        dataframe|None
+            dataframe|None
         """
-        if not isinstance(name,type(None)):
+        logger = self.logger.getChild("analyze_name")
+        logger.info("Call analyze_name")
+        if name is not None or name is not "":
             print("analyze_name={}".format(name))
+            logger.debug(f"Analyze name is \"{name}\"")
             index_distance = 0
             index_ratio = 0
             min_distance = 99
@@ -102,6 +117,7 @@ class PkCSV:
                 return self.pokemon_df[max_ratio_Key:max_ratio_Key]
             else:
                 return None
+
 
 _util = PkCSV()
 

@@ -3,7 +3,7 @@ import os,sys
 from logging import getLogger, StreamHandler, INFO, DEBUG, Formatter, FileHandler
 
 from mylib import OcrRunner, CameraCapture
-from gui import MenuBar, PKInfo, PkInfo2, CanvasGame, CaptureControl, CanvasPkBox
+from gui import MenuBar,  PkInfo2, CanvasGame, CaptureControl, CanvasPkBox
 
 import datetime
 
@@ -75,7 +75,7 @@ def main():
     
     logger.setLevel(LOGGER_LEVEL)
     handler.setLevel(HANDLER_LEVEL)
-    formatter = Formatter('%(asctime)s | %(levelname)s | %(name)s - %(message)s')
+    formatter = Formatter('%(asctime)s | %(levelname)s |  %(name)s:%(lineno)d | %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
