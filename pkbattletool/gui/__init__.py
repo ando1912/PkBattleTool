@@ -7,4 +7,4 @@ from .frame import CanvasPkBox
 from .menu import MenuBar
 from .menu import SubWindowMenu
 
-from .subwindow import SubWindow
+# from .subwindow import SubWindow
