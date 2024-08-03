@@ -6,8 +6,12 @@ import threading
 import re
 from logging import getLogger
 
+import time
+
+from .imgforge import CameraFrameForge
+from .webcam_capture import CameraCapture
 from module import config
-from . import imgforge
+
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class OcrRunner:
@@ -19,18 +23,18 @@ class OcrRunner:
     .text=OCR分析結果
     """
     # BUG:スレッドを終了しないままウィンドウを閉じるとプロセスが終わらない
-    def __init__(self, camera_capture, ocr_option:str):
-        self.logger = getLogger("Log").getChild(f"OcrRunner({ocr_option})")
-        self.logger.info(f"Called OcrRunner:{ocr_option}")
+    def __init__(self, camera_capture:CameraCapture):
+        self.logger = getLogger("Log").getChild(f"OcrRunner")
+        self.logger.info(f"Called OcrRunner")
         self.tesserac_path = config.get("DEFAULT","tesseract_path")
 
-        self.option = ocr_option
         self.camera_capture = camera_capture
 
-        self.frame_forge = imgforge.CameraFrameForge(camera_capture, ocr_option)
+        self.frame_forge = CameraFrameForge(camera_capture)
         
-        self.frame = None # 文字認識を行う画像
-        self.frame_list = [] # マスク処理のための画像リスト
+        self.frame = None
+        self.frame_list = []
+        self.grayscale_framelist = []
 
         self.width = int(self.camera_capture.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.camera_capture.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -55,8 +59,6 @@ class OcrRunner:
                 }
             }
 
-        self.ocr_option = self.list_ocr_option[ocr_option]
-
         self.text = None
 
         self.is_ocr_running = False
@@ -73,31 +75,37 @@ class OcrRunner:
         self.logger.getChild("stop_ocr_thread").info("Execute stop_ocr_thread")
         self.is_ocr_running = False
         self.frame_list = []
+        self.grayscale_framelist = []
 
     def run_ocr_thread(self):
         logger = self.logger.getChild("run_ocr_thread")
         
+        logger.info("Execute run_ocr_thread")
         while self.is_ocr_running:
-            logger.info("Execute run_ocr_thread")
             # 画像の取得と加工
-            frame = self.get_frame() # CameraCaptureからフレームの取得
-            crop_frame = self.frame_forge.crop_frame(frame) # フレームの切り抜き
-            
+            ret, frame = self.get_frame() # CameraCaptureからフレームの取得
+            if not ret:
+                break
+            # crop_frame = self.frame_forge.crop_frame(frame) # フレームの切り抜き
             # グレースケール変換
-            frame = self.frame_forge.grayscale_frame(crop_frame)
-            # 二値化
-            binary_frame = self.frame_forge.binaly_frame(frame)
+            gratscale_frame = self.frame_forge.grayscale_frame(frame)
+        
+            self.frame_list.append(frame)
+            self.grayscale_framelist.append(gratscale_frame)
             
-            self.frame_list.append(binary_frame)
-            if len(self.frame_list) > 5: # 5枚以上になったら古いフレームから削除
+            
+            
+            if len(self.frame_list) > 5: # 規定以上の枚数になったら古いフレームから削除
                 self.frame_list.pop(0)
-
-            # フレームの差を求める
-            self.frame = self.frame_forge.diff_frames(self.frame_list)
+                self.grayscale_framelist.pop(0)
+                # for i, img in enumerate(self.frame_list):
+                #     cv2.imwrite(f"{i}.png", img)
+                
             
-            text = self.run_ocr(self.frame)
-            self.text = self.normalize_text(text)
-            logger.debug(f"OCR result : {self.text}")
+            # text = self.run_ocr(self.frame)
+            # self.text = self.normalize_text(text)
+            # logger.debug(f"OCR result : {self.text}")
+            time.sleep(0.05)
 
     def normalize_text(self, text:str) -> str:
         """
@@ -114,16 +122,33 @@ class OcrRunner:
         """
         return  self.camera_capture.get_frame()
 
-    def run_ocr(self, frame) -> str:
+    def masked_frame(self, option:str, grayscale_framelist=None):
+        logger = self.logger.getChild("masked_frame")
+        logger.info("Run masked_frame")
+        if grayscale_framelist is None:
+            grayscale_framelist = self.grayscale_frame_list
+        binary_frame_list = []
+        
+        for grayscale_frame in grayscale_framelist:
+            crop_frame = self.frame_forge.crop_frame(grayscale_frame, option)
+            # 二値化
+            binary_frame = self.frame_forge.binaly_frame(crop_frame, option)
+            
+            binary_frame_list.append(binary_frame)
+        # フレームの差を求める
+        return self.frame_forge.diff_frames(binary_frame_list, option)
+
+    def run_ocr(self, frame, option=str) -> str:
         if self.tesserac_path not in os.environ["PATH"].split(os.pathsep):
             os.environ["PATH"] += os.pathsep + self.tesserac_path
+        
         tools = pyocr.get_available_tools()
         tool= tools[0]
 
         PIL_Image = Image.fromarray(frame)
         text = tool.image_to_string(
             PIL_Image,
-            lang=self.ocr_option["lang"],
+            lang=self.list_ocr_option[option]["lang"],
             builder=pyocr.builders.TextBuilder(tesseract_layout=6))
         
         return text
@@ -133,7 +158,7 @@ class OcrControl:
     OcrRunnerを組み合わせて処理を行う
     """
     def __init__(self, ocr_runner:OcrRunner):
-        self.logger = getLogger("Log").getChild(f"OcrControl({ocr_runner.option})")
+        self.logger = getLogger("Log").getChild(f"OcrControl")
         self.ocr_runner = ocr_runner
         self.activemode = False
 
@@ -147,10 +172,33 @@ class OcrControl:
         self.activemode = False
         self.logger.getChild("stop_ocr_thread").info("Stop ocr thread")
 
+    def get_frame_list(self):
+        self.logger.getChild("get_frame_list").info("Run get_frame")
+        if len(self.ocr_runner.frame_list) == 0:
+            return [self.ocr_runner.get_frame()]
+        else:
+            return self.ocr_runner.frame_list
+        
+    def get_grayscale_framelist(self):
+        self.logger.getChild("get_grayscale_frame_list").info("Run get_grayscale_frame")
+        if len(self.ocr_runner.grayscale_framelist)==0:
+            return [cv2.cvtColor(self.get_frame(), cv2.COLOR_BGR2GRAY)]
+        else:
+            return self.ocr_runner.grayscale_framelist
+
     def get_frame(self):
         self.logger.getChild("get_frame").info("Run get_frame")
-        return self.ocr_runner.frame
+        if self.ocr_runner.frame is None:
+            return self.ocr_runner.get_frame()
+        else:
+            return self.ocr_runner.frame
+    
+    def get_mask_frame(self, frame_list, option:str):
+        self.logger.getChild("get_mask_frame").info(f"Get masked frame : {option}")
+        frame = self.ocr_runner.masked_frame(option, frame_list)
+        return frame
 
-    def get_ocrtext(self):
-        self.logger.getChild("get_ocrtext").info("Got text")
-        return self.ocr_runner.text
+    def get_ocrtext(self, frame, option:str, ):
+        self.logger.getChild("get_ocrtext").info(f"Get ocrtext : {option}")
+        text = self.ocr_runner.run_ocr(frame=frame, option=option)
+        return text
