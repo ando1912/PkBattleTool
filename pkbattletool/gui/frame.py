@@ -282,7 +282,7 @@ class CanvasPkBox(tk.Frame):
         self.ocr_control = OcrControl(OcrRunner(self.camera_capture, "rankbattle"))
         
         self.pkhash = PkHash()
-        self.imgf = CameraFrameForge(camera_capture,"pokemonbox")
+        self.frame_forge = CameraFrameForge(camera_capture,"pokemonbox")
 
         self.screenshot_folder_path = config.get("DEFAULT","screenshot_folder")
 
@@ -302,7 +302,7 @@ class CanvasPkBox(tk.Frame):
         self.button_save_pkbox = tk.Button(self, text="更新", command=self.func_reload_pkbox)
 
         # サブウェジット作成
-        for i in range(0,6):
+        for _ in range(0,6):
             pksub = SubFrame_PkBox(self.canvas_frame)
             pksub.pack(anchor=tk.NW)
             self.pkbox_subframe_list.append(pksub)
@@ -340,7 +340,7 @@ class CanvasPkBox(tk.Frame):
             if similar_val < 3:
                 camera_frame = self.camera_capture.get_frame()
                 if camera_frame is not None:
-                    crop_frame = self.imgf.crop_frame(camera_frame)
+                    crop_frame = self.frame_forge.crop_frame(camera_frame)
                     
                     self.func_save_pkbox(crop_frame)
         
