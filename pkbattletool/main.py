@@ -1,6 +1,6 @@
 import tkinter as tk
 import os,sys
-from logging import getLogger, StreamHandler, INFO, DEBUG, Formatter, FileHandler
+from logging import getLogger, Logger, StreamHandler, INFO, DEBUG, Formatter, FileHandler
 
 from mylib import OcrRunner, CameraCapture
 from gui import MenuBar, PkInfo_OCR, CanvasGame, CaptureControl, CanvasPkBox
@@ -10,56 +10,85 @@ import datetime
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class MainWindow(tk.Frame):
-    def __init__(self, root:tk.Tk=None):
-        super().__init__(root)
-        menubar = MenuBar(root)
+    def __init__(self, master:tk.Tk=None):
+        super().__init__(master)
         
-        camera_capture = CameraCapture()
-        ocr_runner = OcrRunner(camera_capture)
+        self.logger = getLogger("Log").getChild("MainWindow")
+        self.root = master
+        
+        self.camera_capture = CameraCapture()
+        self.ocr_runner = OcrRunner(self.camera_capture)
 
         # フレームウェジットの作成
         # ポケモン情報簡易表示
-        frame_pkinfo = PkInfo_OCR(root, ocr_runner, bd=1, relief=tk.SOLID)
-        frame_pkinfo.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
+        self.frame_pkinfo = PkInfo_OCR(self, self.ocr_runner, bd=1, relief=tk.SOLID)
+        self.frame_pkinfo.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
         
         # ゲーム画面
-        frame_canvasgame = CanvasGame(root, camera_capture, bd=2, relief=tk.SOLID)
-        frame_canvasgame.grid(row=1, rowspan=2, column=0, columnspan=2, padx=5, pady=5)
+        self.frame_canvasgame = CanvasGame(self, self.camera_capture, bd=2, relief=tk.SOLID)
+        self.frame_canvasgame.grid(row=1, rowspan=2, column=0, columnspan=2, padx=5, pady=5)
         
         # キャプチャコントロール
-        frame_capturecontrol = CaptureControl(root, camera_capture, ocr_runner, bd=1, relief=tk.SOLID)
-        frame_capturecontrol.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.frame_capturecontrol = CaptureControl(self, self.camera_capture, self.ocr_runner, bd=1, relief=tk.SOLID)
+        self.frame_capturecontrol.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)
         
         # 相手の手持ち一覧
-        frame_canvaspkbox = CanvasPkBox(root, camera_capture, ocr_runner, bd=2, relief=tk.SOLID)
-        frame_canvaspkbox.grid(row=0, column=2, rowspan=3, padx=5, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.frame_canvaspkbox = CanvasPkBox(self, self.camera_capture, self.ocr_runner, bd=2, relief=tk.SOLID)
+        self.frame_canvaspkbox.grid(row=0, column=2, rowspan=3, padx=5, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)
+    
+        self.grid()
+        
+    def close(self) -> None:
+        """
+        終了時の処理
+        """
+        self.frame_capturecontrol.close()
+        self.frame_pkinfo.close()
+        self.frame_canvaspkbox.close()
+        self.ocr_runner.close()
+        self.logger.info("Close MainWindow")
 
-        # ウィンドウを閉じる時の処理
-        def click_close():
-            frame_capturecontrol.camera_capture.stop_capture()
-            frame_capturecontrol.camera_capture.release_camera()
-            frame_pkinfo.ocr_runner.stop_ocr_thread()
-            frame_canvaspkbox.ocr_runner.stop_ocr_thread()
-            getLogger("Log").getChild("GUImain").info("Process end")
-            root.quit()
-            root.destroy()
-            
-        root.protocol("WM_DELETE_WINDOW", click_close)
+class Application(tk.Tk):
+    """
+    基盤となるアプリケーション
+    """
+    def __init__(self):
+        super().__init__()
+        
+        self.withdraw() # ウィンドウを非表示にする
+        
+        # アイコンの設定
+        # 参考；https://qiita.com/KMiura95/items/cae599efa8a908a4bb01
+        self.iconbitmap(
+            default=f"resources/icon.ico"
+        )
+        
+        self.resizable(0,0) # ウィンドウサイズ変更の禁止
+        self.title("ポケモン対戦支援ツール")
+        self.mainwidget = MainWindow(self)
+        
+        menubar = MenuBar(self)
+        
+        self.protocol("WM_DELETE_WINDOW", self.click_close)
+        
+        self.deiconify() # ウィンドウの再表示
+        
+    def click_close(self):
+        self.mainwidget.close()
+        self.quit()
+        self.destroy()
 
-        frame_pkinfo.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W+tk.E)
-
-def main():
+def setup_logging() -> Logger:
     # ログ設定
     logger = getLogger("Log")
     handler = StreamHandler()
-
 
     LOGGER_LEVEL = DEBUG
     HANDLER_LEVEL = DEBUG
     
     logger.setLevel(LOGGER_LEVEL)
     handler.setLevel(HANDLER_LEVEL)
-    formatter = Formatter('%(asctime)s | %(levelname)s |  %(name)s:%(lineno)d | %(message)s')
+    formatter = Formatter('%(asctime)s | %(process)d:%(thread)d | %(levelname)s | %(module)s:%(lineno)d |  %(name)s | %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -71,24 +100,15 @@ def main():
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
-    logger.info("START PkBattleTool")
+    logger.getChild("setup_logging").info("START PkBattleTool")
     
-    root = tk.Tk()
-    root.withdraw() # ウィンドウを非表示にする
-    
-    # アイコンの設定
-    # 参考；https://qiita.com/KMiura95/items/cae599efa8a908a4bb01
-    root.iconbitmap(
-        default=f"{PATH}/resources/icon.ico"
-    )
-    
-    root.resizable(0,0) # ウィンドウサイズ変更の禁止
-    
-    # ウィンドウタイトル
-    root.title("ポケモン対戦支援ツール")
-    window = MainWindow(root)
-    window.deiconify() # ウィンドウを再表示する
-    window.mainloop()
+    return logger
+        
+
+def main():
+    logger = setup_logging()
+    app = Application()
+    app.mainloop()
 
 if __name__ == "__main__":
     main()
