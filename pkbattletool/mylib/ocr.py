@@ -159,6 +159,8 @@ class OcrRunner:
         return re.compile('[!"#$%&\'\\\\()*+,-./:;<=>?@[\\]^_`{|}~「」〔〕“”〈〉『』【】＆＊・（）＄＃＠。、？！｀＋￥％ 　]').sub("",text)
 
     def get_ocr_text(self, frame, option=str) -> str:
+
+
         logger = self.logger.getChild("get_ocr_text")
         logger.info(f"Run get_ocr_text : {option}")
 
