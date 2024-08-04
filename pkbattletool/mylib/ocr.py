@@ -22,11 +22,14 @@ class OcrRunner:
     """
     キャプチャ画像に対して画像処理を行う
     """
+
     def __init__(self, camera_capture:CameraCapture):
         self.logger = getLogger("Log").getChild(f"OcrRunner")
         self.logger.info(f"Called OcrRunner")
+
         self.tesserac_path = config.get("DEFAULT","tesseract_path")
 
+        self.option = ocr_option
         self.camera_capture = camera_capture
 
         self.frame_forge = CameraFrameForge(camera_capture)
@@ -34,6 +37,7 @@ class OcrRunner:
         self.frame = None
         self.framelist = []
         self.grayscale_framelist = []
+
 
         self.width = int(self.camera_capture.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.camera_capture.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -73,7 +77,9 @@ class OcrRunner:
         self.logger.info("Close OcrRunner")
         
     def start_ocr_thread(self):
+
         self.logger.getChild("start_ocr_thread").info("Execute start_ocr_thread")
+
         self.is_ocr_running = True
         self.ocr_thread = threading.Thread(target=self.run_ocr_thread, name="Thread OCR")
         self.ocr_thread.daemon = True
@@ -82,10 +88,13 @@ class OcrRunner:
     def stop_ocr_thread(self):
         self.logger.getChild("stop_ocr_thread").info("Execute stop_ocr_thread")
         self.is_ocr_running = False
+        
         self.framelist = []
         self.grayscale_framelist = []
     
+
     def get_frame(self) -> cv2.typing.MatLike:
+
         """
         カメラからフレームを取得
         return:
@@ -145,17 +154,20 @@ class OcrRunner:
         """
         記号文字などを削除する
         """
+
         self.logger.getChild("normalize_text").debug("Execute normalize_text")
         return re.compile('[!"#$%&\'\\\\()*+,-./:;<=>?@[\\]^_`{|}~「」〔〕“”〈〉『』【】＆＊・（）＄＃＠。、？！｀＋￥％ 　]').sub("",text)
 
     def get_ocr_text(self, frame, option=str) -> str:
         logger = self.logger.getChild("get_ocr_text")
         logger.info(f"Run get_ocr_text : {option}")
+
         if self.tesserac_path not in os.environ["PATH"].split(os.pathsep):
             os.environ["PATH"] += os.pathsep + self.tesserac_path
         
         tools = pyocr.get_available_tools()
         tool= tools[0]
+
 
         PIL_Image = Image.fromarray(frame)
         text = tool.image_to_string(
