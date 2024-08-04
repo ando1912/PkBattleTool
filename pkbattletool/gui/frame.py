@@ -383,6 +383,7 @@ class CanvasPkBox(tk.Frame):
         self.after(2000, self.update_pkbox)
 
     def func_save_pkbox(self, crop_frame: cv2.typing.MatLike)  -> None:
+
         """
         画面内の手持ちリストを撮影し、キャンパスに描画する
         """
