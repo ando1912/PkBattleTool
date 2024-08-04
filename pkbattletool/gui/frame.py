@@ -5,7 +5,10 @@ import pandas as pd
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
+
 import tkinter as tk
+# フォント設定変更：https://office54.net/python/tkinter/python-tkinter-label
+
 import Levenshtein
 
 import threading
@@ -300,7 +303,7 @@ class CanvasPkBox(tk.Frame):
     def __init__(self, master:tk, camera_capture:CameraCapture, ocr_runner:OcrRunner,**kwargs):
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("CanvasPkBox")
-        self.logger.debug("Hello CanvasPkBox")
+        self.logger.info("Called CanvasPkBox")
 
         self.ocr_runner = ocr_runner
         
@@ -458,7 +461,7 @@ class SubFrame_PkBox(tk.Frame):
     def __init__(self, master:tk, **kwargs):
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("SubFrame_PkBox")
-        self.logger.debug("Hello SubFrame_PkBox")
+        self.logger.info("Called SubFrame_PkBox")
 
         # print("create_SubFrame_PkBox")
 
@@ -580,7 +583,7 @@ class ClickMenu:
         self.root = master
 
         self.logger = getLogger("Log").getChild("ClickMenu")
-        self.logger.debug("Hello ClickMenu")
+        self.logger.info("Called ClickMenu")
 
         self.sub_window = None
         self.pkhash = PkHash()
@@ -710,18 +713,20 @@ class ClickMenu:
 
         self.cut_frame = cut_frame
         self.sub_window = tk.Toplevel(self.root)
-        self.sub_window.title("ポケモン情報")
-
-        
+        self.sub_window.title("基本ポケモン情報")
         
         # メインフレーム
-        self.frame = PokemonInfoBaceFrame(self.sub_window, cut_frame, key)
+        self.frame = PokemonInfoBaseFrame(self.sub_window, cut_frame, key)
         self.frame.pack(fill=tk.BOTH, pady=10)
 
 class PokemnImageInfo(tk.Frame):
+    
     def __init__(self, master, frame, pokemon_series, **kwargs):
         super().__init__(master, **kwargs)
-        self.frame = frame
+        self.logger = getLogger("Log").getChild("PokemonImageInfo")
+        self.logger.info("Called PokemonImageInfo")
+        
+        self.frame = cv2.resize(frame, None, fx=2, fy=2) # 画像サイズを2倍にする
         self.pokemon_series = pokemon_series
         
         self.set_canvas()
@@ -733,8 +738,14 @@ class PokemnImageInfo(tk.Frame):
         """
         ポケモンの画像を映すキャンバスの設定
         """
+        self.logger.debug("Run set_canvas")
+        
         self.canvas_pokemon = tk.Canvas(self, bd=2, relief=tk.SOLID)
-        self.canvas_pokemon.configure(width=106, height=101, bg="gray")
+        height, width, _ = self.frame.shape[:3]
+        self.canvas_pokemon.configure(
+            width=width, # 106x
+            height=height, # 101x
+            bg="gray")
         # BGR->RGB変換
         self.image_rgb = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
         # RGB->PILフォーマット
@@ -747,26 +758,31 @@ class PokemnImageInfo(tk.Frame):
     
     def set_labelvalue(self):
         """
-        表示テキストのデータ入力
+        表示テキストのデータ入力1
         """
-        self.label_name = tk.Label(self, text="名前")
-        self.label_index = tk.Label(self, text="図鑑No")
-        self.label_type = tk.Label(self, text="タイプ")
+        self.logger.debug("Run set_labelvalue")
         
-        self.label_name_value = tk.Label(self, text=self.pokemon_series["Name"])
+        font = tk.font.Font(family="MSゴシック", size=20, weight="bold")
+        
+        self.label_name = tk.Label(self, text="名前", font=font)
+        self.label_index = tk.Label(self, text="図鑑No", font=font)
+        self.label_type = tk.Label(self, text="タイプ", font=font)
+        
+        self.label_name_value = tk.Label(self, text=self.pokemon_series["Name"], font=font)
         if self.pokemon_series["Form"]==None:
-            self.label_form_value = tk.Label(self, text="")
+            self.label_form_value = tk.Label(self, text="", font=font)
         else:
-            self.label_form_value = tk.Label(self, text=self.pokemon_series["Form"])
-        self.label_index_value = tk.Label(self, text=self.pokemon_series["Index"])
-        self.label_type1_value = tk.Label(self, text=self.pokemon_series["Type1"])
-        self.label_type2_value = tk.Label(self, text=self.pokemon_series["Type2"])
+            self.label_form_value = tk.Label(self, text=self.pokemon_series["Form"], font=font)
+        self.label_index_value = tk.Label(self, text=self.pokemon_series["Index"], font=font)
+        self.label_type1_value = tk.Label(self, text=self.pokemon_series["Type1"], font=font)
+        self.label_type2_value = tk.Label(self, text=self.pokemon_series["Type2"], font=font)
     
     def set_labelgrid(self):
         """
         テキスト情報の配置設定
         """
-
+        self.logger.debug("Run set_labelgrid")
+        
         self.canvas_pokemon.grid(
             row=0, column=0, rowspan=4, sticky=tk.W)
         self.label_index.grid(
@@ -792,6 +808,8 @@ class PokemonStatus(tk.Frame):
     """
     def __init__(self, master, pokemon_series, **kwargs):
         super().__init__(master, **kwargs)
+        self.logger = getLogger("Log").getChild("PokemonStatus")
+        self.logger.info("Called PokemonStatus")
         
         self.pokemon_series = pokemon_series
         
@@ -859,14 +877,18 @@ class PokemonStatus(tk.Frame):
             row=7,column=1,sticky=tk.W
         )
 
-class WeekType(tk.Frame):
+class WeakType(tk.Frame):
     """
     タイプ相性のフレーム
     """
     def __init__(self, master, pokemon_series, **kwargs):
         super().__init__(master, **kwargs)
+        self.logger = getLogger("Log").getChild("WeakType")
+        self.logger.info("Called WeakType")
         
-        self.label_weaktype = tk.Label(self, text="弱点").grid(row=0,column=0)
+        font = tk.font.Font(family="MSゴシック", size=20, weight="bold")
+        
+        self.label_weaktype = tk.Label(self, text="弱点", font=font).grid(row=0,column=0)
 
         self.frame_weaktype_effective = tk.Frame(self)
         self.frame_weaktype_noteffective = tk.Frame(self)
@@ -880,17 +902,23 @@ class WeekType(tk.Frame):
         weaktype_df = PkTypeCompatibility().effectivetype(pokemon_series["Type1"],pokemon_series["Type2"]).sort_values(ascending=False)
         for index, row in weaktype_df.items():
             if row>=2: #こうかはばつぐん
-                weaktype_effective_list.append(tk.Label(self.frame_weaktype_effective, text=f"{index}\tx{row}").pack())
+                weaktype_effective_list.append(tk.Label(self.frame_weaktype_effective, text=f"{index}\tx{row}", font=font).pack())
             if row<1: #こうかはいまひとつ
-                weaktype_noteffective_list.append(tk.Label(self.frame_weaktype_noteffective, text=f"{index}\tx{row}").pack())
+                weaktype_noteffective_list.append(tk.Label(self.frame_weaktype_noteffective, text=f"{index}\tx{row}", font=font).pack())
         
 class StatusGraph(tk.Frame):
+    """
+    種族値をグラフ表示するフレーム
+    参考元：https://qiita.com/kotai2003/items/45953b4d037a62b2042c
+    """
     def __init__(self, master, pokemon_series, **kwargs):
         super().__init__(master, **kwargs)
+        self.logger = getLogger("log").getChild("StatusGraph")
+        self.logger.info("Called StatusGraph")
         
         self.pokemon_series = pokemon_series
         
-        fig = plt.Figure(figsize=(5,3), dpi=50)
+        fig = plt.Figure(figsize=(6,3), dpi=100)
         ax = fig.add_subplot(1,1,1)
         self.pokemon_series["HP":"Spe"].rename({
             "Atk":"こうげき",
@@ -907,19 +935,23 @@ class StatusGraph(tk.Frame):
         for i, col in enumerate(xlist):
             value = self.pokemon_series[col]
             ax.text(10, i, str(value), ha='left', va='center')
-        #ax.set_yticks(range(len(xlist)))  # y軸の位置
         self.canvas_status = FigureCanvasTkAgg(fig, master=self)
         self.canvas_status.draw()
         
         self.canvas_status.get_tk_widget().grid(row=0,column=0)
         
 
-class PokemonInfoBaceFrame(tk.Frame):
+class PokemonInfoBaseFrame(tk.Frame):
     """
-    ポケモンの詳細情報のフレーム
+    ポケモンの詳細情報をまとめたフレーム
     """
     def __init__(self, master, frame, key, **kwargs):
         super().__init__(master, **kwargs)
+        self.logger = getLogger("Log").getChild("PokemonInfoBaseFrame")
+        self.logger.info("Called PokemonInfoBaseFrame")
+        
+        self.root = master
+        self.root.withdraw() # 非表示
         self.frame = frame
         self.pokemon_series = pkcsv.get_series(key)
         
@@ -930,7 +962,7 @@ class PokemonInfoBaceFrame(tk.Frame):
         # 種族値グラフ
         self.frame_statusgraph = StatusGraph(self, self.pokemon_series, bd=2, relief=tk.SOLID)
         # 弱点タイプフレーム
-        self.frame_baseweaktype = WeekType(self, self.pokemon_series,  bd=2, relief=tk.SOLID)
+        self.frame_baseweaktype = WeakType(self, self.pokemon_series,  bd=2, relief=tk.SOLID)
         
 
         # フレームの配置
@@ -939,3 +971,5 @@ class PokemonInfoBaceFrame(tk.Frame):
         self.frame_baseweaktype.grid(row=0,column=1,rowspan=2,sticky=tk.W+tk.E+tk.N+tk.S)
         # self.canvas_status.get_tk_widget().grid(row=1,column=0)
         self.frame_statusgraph.grid(row=1, column=0)
+        
+        self.root.deiconify()
