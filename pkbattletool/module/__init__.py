@@ -1,2 +1,2 @@
-from . import config
-from . import pkcsv
+from .config import *
+from .pkcsv import *

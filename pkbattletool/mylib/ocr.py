@@ -5,6 +5,7 @@ import numpy as np
 
 import pyocr
 from PIL import Image
+
 import threading
 import re
 from logging import getLogger
@@ -20,10 +21,6 @@ PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 class OcrRunner:
     """
     キャプチャ画像に対して画像処理を行う
-    .frame=処理前画像
-    .cropped_frame=切り出し後画像
-    .binaly_frame=二値化処理後画像
-    .text=OCR分析結果
     """
 
     def __init__(self, camera_capture:CameraCapture):
@@ -48,8 +45,8 @@ class OcrRunner:
         self.list_ocr_option =  {
             # メッセージボックス
             "message":{
-
-                "thresh":200
+                "thresh":200,
+                "lang":"jpn"
                 },
             "level":{
                 "thresh":100,
@@ -72,12 +69,19 @@ class OcrRunner:
 
         self.ocr_thread = None
 
+    def close(self):
+        """
+        終了時の処理
+        """
+        self.stop_ocr_thread()
+        self.logger.info("Close OcrRunner")
+        
     def start_ocr_thread(self):
 
         self.logger.getChild("start_ocr_thread").info("Execute start_ocr_thread")
 
         self.is_ocr_running = True
-        self.ocr_thread = threading.Thread(target=lambda:self.run_ocr_thread())
+        self.ocr_thread = threading.Thread(target=self.run_ocr_thread, name="Thread OCR")
         self.ocr_thread.daemon = True
         self.ocr_thread.start()
 
@@ -89,7 +93,8 @@ class OcrRunner:
         self.grayscale_framelist = []
     
 
-    def get_frame(self):
+    def get_frame(self) -> cv2.typing.MatLike:
+
         """
         カメラからフレームを取得
         return:
@@ -128,12 +133,9 @@ class OcrRunner:
         logger.info("Execute run_ocr_thread")
         while self.is_ocr_running:
             # 画像の取得と加工
-            ret, frame = self.get_frame() # CameraCaptureからフレームの取得
-            if not ret:
+            frame = self.get_frame() # CameraCaptureからフレームの取得
+            if frame is None:
                 logger.debug("Frame is None")
-                continue
-            elif len(self.framelist)>0 and np.array_equal(frame, self.framelist[-1]):
-                logger.debug("Frame has been saved")
                 continue
             # グレースケール変換
             gratscale_frame = self.frame_forge.grayscale_frame(frame)
@@ -145,13 +147,7 @@ class OcrRunner:
             if len(self.framelist) > 5: # 規定以上の枚数になったら古いフレームから削除
                 self.framelist.pop(0)
                 self.grayscale_framelist.pop(0)
-                # for i, img in enumerate(self.framelist):
-                #     cv2.imwrite(f"{i}.png", img)
-                
             
-            # text = self.run_ocr(self.frame)
-            # self.text = self.normalize_text(text)
-            # logger.debug(f"OCR result : {self.text}")
             time.sleep(0.01)
 
     def normalize_text(self, text:str) -> str:

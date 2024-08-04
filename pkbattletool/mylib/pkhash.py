@@ -6,7 +6,6 @@ import os, sys
 
 import cv2
 from logging import getLogger
-sys.path.append(".")
 from module import pkcsv
 
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))

@@ -1,9 +1,9 @@
 import os, sys
 import cv2
+
 from threading import Thread
 import datetime
 from logging import getLogger
-
 
 from module import config
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -17,11 +17,9 @@ class CameraCapture:
 
         self.vid.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         self.vid.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        self.vid.set(cv2.CAP_PROP_FPS, int(config.get("DEFAULT","display_fps")))
         
         self.screenshot_folder_path = config.get("DEFAULT","screenshot_folder")
-        
-        
-        self.vid.set(cv2.CAP_PROP_FPS, int(config.get("DEFAULT","display_fps")))
 
         self.width = self.vid.get(cv2.CAP_PROP_FRAME_WIDTH)
         self.height = self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -32,6 +30,13 @@ class CameraCapture:
         self.is_capturing:bool = False
         self.capture_thread:Thread = None
         self.frame:cv2.typing.MatLike = None
+        
+        # 録画設定
+        fourcc = cv2.VideoWriter_fourcc("m","p","4","v")
+        name = "sample.mp4"
+        self.video = cv2.VideoWriter(name, fourcc, int(self.display_fps), (int(self.width), int(self.height)))
+        
+        self.is_record:bool = False
     
     def start_capture(self) -> None:
         """
@@ -62,8 +67,10 @@ class CameraCapture:
             if ret:
                 logger.debug("save frame")
                 self.frame = frame
-        
-    def get_frame(self) -> tuple[bool, cv2.typing.MatLike]:
+                if self.is_record:
+                    self.video.write(frame)
+            
+    def get_frame(self) -> cv2.typing.MatLike:
         """カメラの画像を取得する
         
         Returns:
@@ -71,53 +78,56 @@ class CameraCapture:
         """
         
         
-        return self.frame is not None, self.frame
+        return self.frame
 
     def save_frame(self) -> None:
         """
         スクリーンショットした画像を保存する
         """
-        self.logger.debug("Execute save_frame")
+        logger = self.logger.getChild("save_frame")
+        logger.debug("Execute save_frame")
         # screenshot保存フォルダがなかった場合にフォルダを作成する
         try:
             if os.path.exists(f"{PATH}/{self.screenshot_folder_path}"):
                 os.mkdir(f"{PATH}/{self.screenshot_folder_path}")
-                self.logger.info(f"Success makedir {self.screenshot_folder_path}")
+                logger.info(f"Success makedir {self.screenshot_folder_path}")
         except Exception as e:
-            self.logger.error(f"Fault makedir {self.screenshot_folder_path} : {e}")
+            logger.error(f"Fault makedir {self.screenshot_folder_path}")
+            logger.exception(e)
         file_name = f"screenshot_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}"
         try:
             cv2.imwrite(f"{PATH}/{self.screenshot_folder_path}/{file_name}.png", self.frame)
             print("save as {}".format(file_name))
         except Exception as e:
-            self.logger.error(f"Fault save image : {e}")
+            self.logger.error(f"Fault save image")
+            self.logger.exception(e)
 
-    def release(self) -> None:
+    def release_camera(self) -> None:
         """
         カメラを開放する
         """
         self.logger.info("Execute release")
         if self.vid.isOpened():
             self.vid.release()
+        self.video.release()
     
-class CameraControl:
-    def __init__(self, camera_capture:CameraCapture):
-        self.logger = getLogger("Log").getChild("CameraControl")
-        self.camera_capture = camera_capture
+# class CameraControl:
+#     def __init__(self, camera_capture:CameraCapture):
+#         self.logger = getLogger("Log").getChild("CameraControl")
+#         self.camera_capture = camera_capture
 
-    def start_capture(self) -> None:
-        self.logger.debug("Execute start_capture")
-        self.camera_capture.start_capture()
+#     def start_capture(self) -> None:
+#         self.logger.debug("Execute start_capture")
+#         self.camera_capture.start_capture()
 
-    def stop_capture(self) -> None:
-        self.logger.debug("Execute stop_capture")
-        self.camera_capture.stop_capture()
+#     def stop_capture(self) -> None:
+#         self.logger.debug("Execute stop_capture")
+#         self.camera_capture.stop_capture()
 
-    def release_camera(self) -> None:
-        self.logger.debug("Execute release_camera")
-        self.camera_capture.release()
+#     def release_camera(self) -> None:
+#         self.logger.debug("Execute release_camera")
+#         self.camera_capture.release()
     
-    def save_frame(self) -> None:
-        self.logger.debug("Execute save_frame")
-        # print("スクリーンショット開始")
-        self.camera_capture.save_frame()
+#     def save_frame(self) -> None:
+#         self.logger.debug("Execute save_frame")
+#         self.camera_capture.save_frame()
