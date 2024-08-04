@@ -20,7 +20,7 @@ rcParams["font.sans-serif"] = ["Meiryo"]
 from logging import getLogger
 
 from module import config, pkcsv
-from mylib import CameraCapture, SearchDB, CameraControl, PkTypeCompatibility, PkHash, CameraFrameForge, OcrRunner
+from mylib import CameraCapture, SearchDB, PkTypeCompatibility, PkHash, CameraFrameForge, OcrRunner
 
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
@@ -87,8 +87,11 @@ class PkInfo_OCR(tk.Frame):
                 #     return
                 level_masked_frame = self.ocr_runner.get_masked_frame(grayscale_framelist, "level")
                 level_text = self.ocr_runner.get_ocr_text(level_masked_frame, "level")
-            
-                logger.debug(f"Read OCR(level) : {level_text}")
+
+                try:
+                    logger.debug("Read OCR(level) : %s", level_text)
+                except Exception as e:
+                    logger.exception(e)
             
                 # FIXME: 検出誤差によってLvが含まれない場合がある
                 # FIXME レベルテキスト検知　-> ポケモン名検知でそれぞれ画像の取得タイミングが違う問題 ⇛ 取得値がNoneの時の問題？
@@ -141,7 +144,8 @@ class PkInfo_OCR(tk.Frame):
                 type2 = result_df.at[result_df.index[0],"Type2"]
                 self.func_update_status(name, index, type1, type2)
         except Exception as e:
-            logger.error(f"Fault search : {e}")
+            logger.error(f"Fault search")
+            logger.exception(e)
 
 class CaptureControl(tk.Frame):
     """
@@ -157,7 +161,7 @@ class CaptureControl(tk.Frame):
         self.logger = getLogger("Log").getChild("CaptureControl")
         self.logger.info("Called CaptureControl")
 
-        self.camera_control = CameraControl(camera_capture)
+        self.camera_capture = camera_capture
         self.ocr_runner = ocr_runner
 
         self.flag_capture = False
@@ -181,13 +185,13 @@ class CaptureControl(tk.Frame):
         if self.flag_capture: # キャプチャが有効の場合
             self.flag_capture = False
             self.button_cap_control.config(text="キャプチャー起動") # テキストを変更
-            self.camera_control.stop_capture()
+            self.camera_capture.stop_capture()
             self.ocr_runner.stop_ocr_thread()
             self.logger.debug("Stopped capture")
         else: # キャプチャが無効の場合
             self.flag_capture = True
             self.button_cap_control.config(text="キャプチャー停止") # テキストを変更
-            self.camera_control.start_capture()
+            self.camera_capture.start_capture()
             self.ocr_runner.start_ocr_thread()
             self.logger.debug("Started capture")
 
@@ -196,7 +200,7 @@ class CaptureControl(tk.Frame):
         スクリーンショットボタンが押された時の処理
         """
         self.logger.debug("Execute func_screenshot")
-        self.camera_control.save_frame()
+        self.camera_capture.save_frame()
 
 class CanvasGame(tk.Frame):
     """
@@ -241,9 +245,9 @@ class CanvasGame(tk.Frame):
 
         # デフォルト画面の設定
         self.set_default()
-        # self.loop_update()
+
         
-        self.thread = threading.Thread(target=self.func_thread)
+        self.thread = threading.Thread(target=self.func_thread, name="Thread Canvas")
         self.thread.daemon = True
         self.thread.start()
 
@@ -252,20 +256,18 @@ class CanvasGame(tk.Frame):
         while True:
             if self.camera_capture.is_capturing:
                 logger.info("Run loop_update")
-                ret, frame = self.camera_capture.get_frame()
+                frame = self.camera_capture.get_frame()
 
-                if ret:
+                try:
                     frame = cv2.resize(frame, (self.width, self.height))
 
                     self.photo = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
-                    # self.canvas_img.delete("all")
                     self.canvas_img.create_image(0, 0, anchor=tk.NW, image=self.photo)
+                    
                     self.canvas_img.image = self.photo
-                else:
-                    self.logger.debug("Frame is None")
-                #self.canvas_img.delete()
-            # else:
-            #     self.set_default()
+                except Exception as e:
+                    logger.errpr("Fault create_canvas")
+                    logger.exception(e)
 
             time.sleep(0.01)
 
@@ -276,7 +278,7 @@ class CanvasGame(tk.Frame):
         logger = self.logger.getChild("loop_update")
         if self.camera_capture.is_capturing:
             logger.info("Run loop_update")
-            _, frame = self.camera_capture.get_frame()
+            frame = self.camera_capture.get_frame()
 
             if frame is not None:
 
@@ -310,8 +312,6 @@ class CanvasPkBox(tk.Frame):
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("CanvasPkBox")
         self.logger.debug("Hello CanvasPkBox")
-
-        self.camera_capture = camera_capture
 
         self.ocr_runner = ocr_runner
         
@@ -373,10 +373,6 @@ class CanvasPkBox(tk.Frame):
                 similar_val = 99
             
             if similar_val < 3:
-                # camera_frame = self.camera_capture.get_frame()
-                # if camera_frame is not None:
-                #     crop_frame = self.frame_forge.crop_frame(camera_frame)
-                
                 crop_frame = self.frame_forge.crop_frame(framelist[-1], "pokemonbox")
                 self.func_save_pkbox(crop_frame)
         
@@ -427,7 +423,7 @@ class CanvasPkBox(tk.Frame):
                     os.mkdir(f"{PATH}/{self.screenshot_folder_path}/icon/outline")
                 if not os.path.exists(f"{PATH}/{self.screenshot_folder_path}/icon/outline"):
                     os.mkdir(f"{PATH}/{self.screenshot_folder_path}/icon/binary")
-                
+
                 cv2.imwrite(f"{PATH}/{self.screenshot_folder_path}/icon/outline/{date}_{i}.png",self.outline_iconlist[i])
                 gray = cv2.cvtColor(self.outline_iconlist[i], cv2.COLOR_BGR2GRAY)
                 _, binary_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
