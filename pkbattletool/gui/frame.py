@@ -1,4 +1,23 @@
+"""
+GUIウィンドウにのせるフレーム(tkinter.Frame)のクラスを集めたモジュール
+
+PkInfo_OCR:OCRで認識したポケモン名から情報を表示する
+CaptureControl:カメラのキャプチャ切り替えのコントロールパネル
+CanvasGame:カメラが取得した画像を見せる
+CanvasPkBox:相手の手持ち一覧を表示する
+SubFrame_PkBox:相手の個別のポケモンのアイコンボックスを表示させる
+
+ClickMenu:Canvas_PkBox上で右クリックしたときのポップアップメニュー
+
+PokemnImageInfo:ポケモンのアイコンとタイプなどの基本情報を表示する
+PokemonStatus:ポケモンの種族値を表示する
+WeakType:ポケモンのタイプ相性を表示する
+StatusGraph:ポケモンの種族値を棒グラフで表示する
+PokemonInfoBaseFrame:ポケモンの詳細情報をまとめて表示する
+"""
+
 import os, sys
+from typing import Union
 
 import datetime
 import pandas as pd
@@ -28,7 +47,13 @@ from mylib import CameraCapture, SearchDB, PkTypeCompatibility, PkHash, CameraFr
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class PkInfo_OCR(tk.Frame):
-    def __init__(self, master:tk, ocr_runner: OcrRunner, **kwargs):
+    def __init__(self, master:tk.Tk, ocr_runner: OcrRunner, **kwargs):
+        """OCRでポケモン名を認識して表示するフレーム
+
+        Args:
+            master[tk.Tk]: フレームを表示する親ウィンドウ
+            ocr_runner[OcrRunner]:OCRを管理するクラス
+        """
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("PkInfo_OCR")
         self.logger.info("Called PkInfo_OCR")
@@ -70,7 +95,7 @@ class PkInfo_OCR(tk.Frame):
         self.task_id = None
         self.func_check_leveltext()
 
-    def close(self):
+    def close(self) -> None:
         """
         終了時の処理
         """
@@ -115,8 +140,13 @@ class PkInfo_OCR(tk.Frame):
         
     # UI表記の更新
     def func_update_status(self, name:str, index:str, type1:str, type2:str)  -> None:
-        """
-        番号、名前、タイプ1、タイプ2を引数として与え、UIを更新する
+        """フレーム上の情報を更新
+
+        Args:
+            name (str): ポケモン名
+            index (str): 図鑑番号
+            type1 (str): タイプ１
+            type2 (str): タイプ２
         """
         self.logger.debug("Execute func_update_status")
         self.label_value_name["text"] = name
@@ -130,9 +160,11 @@ class PkInfo_OCR(tk.Frame):
         name = self.label_value_name["text"]
         SearchDB().searchdb(name)
 
-    def func_search_name(self, text:str):
-        """
-        入力されたポケモン名を検索し、情報を表示する
+    def func_search_name(self, text:str) -> None:
+        """OCRで認識したポケモン名をcsvから検索し、情報を取得する
+        
+        Args:
+            text (str): OCRで読み取ったポケモン名
         """
         logger = self.logger.getChild("func_search_name")
         logger.info(f"Execute func_search_name : {text}")
@@ -153,14 +185,13 @@ class PkInfo_OCR(tk.Frame):
             logger.exception(e)
 
 class CaptureControl(tk.Frame):
-    """
-    ゲームキャプチャをコントロールするパネルを作成するフレーム
-    """
-    def __init__(self, master:tk, camera_capture:CameraCapture, ocr_runner:OcrRunner, **kwargs):
-        """
+    def __init__(self, master:tk.Tk, camera_capture:CameraCapture, ocr_runner:OcrRunner, **kwargs):
+        """ゲームキャプチャをコントロールするパネルを作成するフレーム
+        
         Args:
-            master(tk):フレームを配置する親フレーム
-            camera_capture(CameraCapture):カメラキャプチャ
+            master (tk.Tk): フレームを配置する親フレーム
+            camera_capture (CameraCapture): カメラキャプチャ
+            ocr_runner (OcrRunner): OCR管理クラス
         """
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("CaptureControl")
@@ -207,7 +238,7 @@ class CaptureControl(tk.Frame):
         self.logger.debug("Execute func_screenshot")
         self.camera_capture.save_frame()
 
-    def close(self):
+    def close(self) -> None:
         """
         終了時の処理
         """
@@ -216,13 +247,10 @@ class CaptureControl(tk.Frame):
         self.logger.info("Close CaptureControl")
         
 class CanvasGame(tk.Frame):
-    """
-    キャプチャ画面を写すフレーム
-    """
     # FIXME:フレーム描画処理が時々止まる(スレッド処理出来てない影響と思われる) → フレーム取り出し時にカメラから直接取り出していたのが原因？
     # FIXME: grayscale変換が連続して発生するタイミングで描画が遅くなる
-    def __init__(self, master:tk, camera_capture:CameraCapture, **kwargs):
-        """_summary_
+    def __init__(self, master:tk.Tk, camera_capture:CameraCapture, **kwargs):
+        """キャプチャ画面を写すフレーム
 
         Args:
             master (tk): 親ウィンドウ
@@ -264,11 +292,14 @@ class CanvasGame(tk.Frame):
         self.thread.daemon = True
         self.thread.start()
 
-    def close(self):
+    def close(self) -> None:
+        """
+        終了時の処理
+        """
         self.thread.join()
         self.logger.info("Close CanvasGame")
 
-    def func_thread(self):
+    def func_thread(self) -> None:
         logger = self.logger.getChild("func_thread")
         while True:
             if self.camera_capture.is_capturing:
@@ -297,10 +328,14 @@ class CanvasGame(tk.Frame):
         self.canvas_img.create_image(0, 0, anchor=tk.NW, image=self.photo)
 
 class CanvasPkBox(tk.Frame):
-    """
-    対戦開始時の相手の手持ちリストを撮影、表示するフレーム
-    """
-    def __init__(self, master:tk, camera_capture:CameraCapture, ocr_runner:OcrRunner,**kwargs):
+    def __init__(self, master:tk.Tk, camera_capture:CameraCapture, ocr_runner:OcrRunner,**kwargs):
+        """対戦開始時の相手の手持ちリストを撮影、表示するフレーム
+
+        Args:
+            master (tk.Tk): フレームを表示する親ウィンドウ
+            camera_capture (CameraCapture): カメラキャプチャー
+            ocr_runner (OcrRunner): OCR管理クラス
+        """
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("CanvasPkBox")
         self.logger.info("Called CanvasPkBox")
@@ -370,9 +405,11 @@ class CanvasPkBox(tk.Frame):
         
         self.after(2000, self.update_pkbox)
 
-    def func_save_pkbox(self, crop_frame: cv2.typing.MatLike)  -> None:
-        """
-        画面内の手持ちリストを撮影し、キャンパスに描画する
+    def func_save_pkbox(self, crop_frame: np.ndarray)  -> None:
+        """画面内の相手のチームリストを撮影し、キャンパスに描画する
+
+        Args:
+            crop_frame (np.ndarray): チームリストを切り抜いた画像
         """
         self.logger.debug("Execute func_save_pkbox")
         # フレームを取得
@@ -425,9 +462,9 @@ class CanvasPkBox(tk.Frame):
             # 表示の更新
             self.func_reload_pkbox()
 
-    def func_reload_pkbox(self):
+    def func_reload_pkbox(self) -> None:
         """
-        フレームの再読み込み
+        フレーム内のボックスを再読み込みする
         """
         self.logger.debug("Execute func_reload_pkbox")
         try:
@@ -445,20 +482,22 @@ class CanvasPkBox(tk.Frame):
             self.pkbox_subframe_list[i].search_distance = self.dislist[i]
             self.pkbox_subframe_list[i].update_subpkbox()
 
-    def close(self):
+    def close(self) -> None:
         """
         終了時の処理
         """
         self.ocr_runner.stop_ocr_thread()
 
 class SubFrame_PkBox(tk.Frame):
-    """
-    ポケモンの画像と名前をセットにしたサブフレーム
-    """
     # TODO: ポケモンの画像から、データベースの検索やポケ徹の検索ができるようにする
     # TODO: タイプを確認できるようにする
     # TODO: 名前などを表示していない状態でも、空間サイズを固定
-    def __init__(self, master:tk, **kwargs):
+    def __init__(self, master:tk.Frame, **kwargs):
+        """ポケモンの画像と名前をセットにしたサブフレーム
+
+        Args:
+            master (tk.Frame): フレームを表示する親ウィンドウ
+        """
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("SubFrame_PkBox")
         self.logger.info("Called SubFrame_PkBox")
@@ -517,7 +556,7 @@ class SubFrame_PkBox(tk.Frame):
 
         self.reload_subpkbox()
     
-    def on_canvas_right_click(self,event) -> None:
+    def on_canvas_right_click(self, event:tk.Event) -> None:
         """
         キャンバス上で右クリックした時のイベント
         メニューを表示
@@ -529,7 +568,7 @@ class SubFrame_PkBox(tk.Frame):
         else:
             self.context_menu.post(event.x_root, event.y_root)
 
-    def on_canvas_left_click(self, event) -> None:
+    def on_canvas_left_click(self, event:tk.Event) -> None:
         """
         キャンバス上で左クリックした時のイベント
         """
@@ -579,7 +618,12 @@ class SubFrame_PkBox(tk.Frame):
 
 class ClickMenu:
     # TODO: ウィンドウを開く位置をメインウィンドウに合わせる
-    def __init__(self, master:tk):
+    def __init__(self, master:tk.Frame):
+        """チーム一覧のキャンバス上でクリックしたときの処理
+
+        Args:
+            master (tk.Frame): メニューを配置するフレーム
+        """
         self.root = master
 
         self.logger = getLogger("Log").getChild("ClickMenu")
@@ -594,9 +638,11 @@ class ClickMenu:
 
         self.searchdb = SearchDB()
         
-    def addHashData(self, cut_frame:cv2.typing.MatLike) -> None:
-        """
-        csvの追加処理
+    def addHashData(self, cut_frame:np.ndarray) -> None:
+        """ csvにHashを追加する
+
+        Args:
+            cut_frame (np.ndarray): アイコンの切抜き画像
         """
         self.logger.debug("Execute addHashData")
         self.cut_frame = cut_frame
@@ -679,9 +725,12 @@ class ClickMenu:
         self.button_search.grid(row=0, column=3)
         self.button_enter.grid(row=5, column=1, columnspan=2)
 
-    def updateHashData(self, key:str, cut_frame:cv2.typing.MatLike) -> None:
-        """
-        csvの個別更新
+    def updateHashData(self, key:str, cut_frame:np.ndarray) -> None:
+        """csvの個別更新
+
+        Args:
+            key (str): ポケモンの識別キー
+            cut_frame (np.ndarray): ポケモンのアイコン
         """
         self.logger.debug("Execute updateHashData")
         self.cut_frame = cut_frame
@@ -703,9 +752,12 @@ class ClickMenu:
         self.logger.debug("Execute searchDB")
         self.searchdb.searchdb(pokemon_name)
     
-    def viewInfo(self, key:str, cut_frame:cv2.typing.MatLike) -> None:
-        """
-        ポケモン情報の表示
+    def viewInfo(self, key:str, cut_frame:np.ndarray) -> None:
+        """ポケモン情報の表示
+
+        Args:
+            key (str): ポケモンの識別キー
+            cut_frame (np.ndarray): ポケモンのアイコン画像
         """
         #FIXME: 種族値をグラフ表示にしたため、ラベル表示のソースは削除していい
         # ポケモン情報を表示するウィンドウ
@@ -721,7 +773,14 @@ class ClickMenu:
 
 class PokemnImageInfo(tk.Frame):
     
-    def __init__(self, master, frame, pokemon_series, **kwargs):
+    def __init__(self, master:tk.Frame, frame:np.ndarray, pokemon_series:pd.Series, **kwargs):
+        """ポケモンの画像と基本情報を表示するフレーム
+
+        Args:
+            master (tk.Frame): 親フレーム
+            frame (np.ndarray): アイコン画像
+            pokemon_series (pd.Series): ポケモンの情報を格納したSeries
+        """
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("PokemonImageInfo")
         self.logger.info("Called PokemonImageInfo")
@@ -803,10 +862,13 @@ class PokemnImageInfo(tk.Frame):
             row=3,column=3,sticky=tk.W)
 
 class PokemonStatus(tk.Frame):
-    """
-    ポケモンの種族値フレーム
-    """
-    def __init__(self, master, pokemon_series, **kwargs):
+    def __init__(self, master:tk.Frame, pokemon_series:pd.Series, **kwargs):
+        """ポケモンの種族値フレーム
+
+        Args:
+            master (_type_): オヤフレーム
+            pokemon_series (_type_): ポケモンの情報を格納したSeries
+        """
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("PokemonStatus")
         self.logger.info("Called PokemonStatus")
@@ -878,10 +940,13 @@ class PokemonStatus(tk.Frame):
         )
 
 class WeakType(tk.Frame):
-    """
-    タイプ相性のフレーム
-    """
-    def __init__(self, master, pokemon_series, **kwargs):
+    def __init__(self, master:tk.Frame, pokemon_series:pd.Series, **kwargs):
+        """タイプ相性のフレーム
+
+        Args:
+            master (tk.Frame): 親フレーム
+            pokemon_series (pd.Series): ポケモンの情報を格納したSeries
+        """
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("WeakType")
         self.logger.info("Called WeakType")
@@ -905,13 +970,16 @@ class WeakType(tk.Frame):
                 weaktype_effective_list.append(tk.Label(self.frame_weaktype_effective, text=f"{index}\tx{row}", font=font).pack())
             if row<1: #こうかはいまひとつ
                 weaktype_noteffective_list.append(tk.Label(self.frame_weaktype_noteffective, text=f"{index}\tx{row}", font=font).pack())
-        
+
+# 参考元：https://qiita.com/kotai2003/items/45953b4d037a62b2042c
 class StatusGraph(tk.Frame):
-    """
-    種族値をグラフ表示するフレーム
-    参考元：https://qiita.com/kotai2003/items/45953b4d037a62b2042c
-    """
-    def __init__(self, master, pokemon_series, **kwargs):
+    def __init__(self, master:tk.Tk, pokemon_series:pd.Series, **kwargs):
+        """種族値をグラフ表示するフレーム_
+
+        Args:
+            master (tk.Tk): 親フレーム
+            pokemon_series (pd.Series): ポケモンの情報を格納したSeries
+        """
         super().__init__(master, **kwargs)
         self.logger = getLogger("log").getChild("StatusGraph")
         self.logger.info("Called StatusGraph")
@@ -939,13 +1007,16 @@ class StatusGraph(tk.Frame):
         self.canvas_status.draw()
         
         self.canvas_status.get_tk_widget().grid(row=0,column=0)
-        
 
 class PokemonInfoBaseFrame(tk.Frame):
-    """
-    ポケモンの詳細情報をまとめたフレーム
-    """
-    def __init__(self, master, frame, key, **kwargs):
+    def __init__(self, master:tk.Toplevel, frame:np.ndarray, key:str, **kwargs):
+        """ポケモンの詳細情報をまとめたフレーム
+
+        Args:
+            master (tk.Toplevel): フレームを表示するサブウィンドウ
+            frame (np.ndarray): ポケモンのアイコン画像
+            key (str): ポケモンの識別キー
+        """
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("PokemonInfoBaseFrame")
         self.logger.info("Called PokemonInfoBaseFrame")
