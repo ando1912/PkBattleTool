@@ -53,7 +53,7 @@ class PkCSV:
     #         else:
     #             return None
     
-    def Name_search2csv(self, name:str) -> pd.DataFrame | None:
+    def Name_search2csv(self, name:str) -> pd.DataFrame:
         """
         ポケモン名をcsvファイルと照合し、合致するデータフレームを返す
         
@@ -66,7 +66,7 @@ class PkCSV:
         logger.info(f"Call Search to csv-data : {name}")
         
         if name is None:
-            return
+            return pd.DataFrame()
         else:
             # 図鑑のデータフレーム内に名前が見つかれば、そのまま返す
             if name in self.pokemon_df["Name"].values:
@@ -77,10 +77,8 @@ class PkCSV:
             else:
                 logger.info(f"{name} was not found")
                 return self.analyze_name(name)
-            
-        
     
-    def analyze_name(self,name:str) -> pd.DataFrame | None:
+    def analyze_name(self,name:str) -> pd.DataFrame:
         """
         与えられたポケモン名をcsvと照合し、類似する名前のデータフレームを返す
         
@@ -91,8 +89,8 @@ class PkCSV:
         """
         logger = self.logger.getChild("analyze_name")
         logger.info("Call analyze_name")
+        #FIXME: エラーでreturnまで動かない？
         if name is not None and name != "":
-            print("analyze_name={}".format(name))
             logger.debug(f"Analyze name is \"{name}\"")
             # index_distance:int = 0
             # index_ratio:int = 0
@@ -104,26 +102,25 @@ class PkCSV:
             min_distance_Key = None
             max_ratio_Key = None
 
-            for Key, row in self.pokemon_df.iterrows():
-                # print(index)
+            for index, row in self.pokemon_df.iterrows():
                 # 編集距離の計算
-                name_distance = Levenshtein.distance(name, row["Name"])
+                name_distance = Levenshtein.distance(name, row.Name)
                 if min_distance > name_distance:
                     min_distance = name_distance
-                    min_distance_Key = Key
+                    min_distance_Key = index
                 # 類似度の計算
-                name_ratio = Levenshtein.ratio(name, row["Name"])
+                name_ratio = Levenshtein.ratio(name, row.Name)
                 if max_ratio < name_ratio:
                     max_ratio = name_ratio
-                    max_ratio_Key = Key
+                    max_ratio_Key = index
 
             # 編集距離と類似度分析でのインデックスが一致
             # if index_distance == index_ratio:
             #     return self.pokemon_df[max_ratio_Key:max_ratio_Key]
             if min_distance_Key == max_ratio_Key:
-                return self.pokemon_df.iloc[max_ratio_Key]
+                return self.pokemon_df.loc[[min_distance_Key]]
             else:
-                return None
+                return pd.DataFrame()
 
 
 _util = PkCSV()
