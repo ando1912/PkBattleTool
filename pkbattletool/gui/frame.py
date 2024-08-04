@@ -20,13 +20,12 @@ rcParams["font.sans-serif"] = ["Meiryo"]
 from logging import getLogger
 
 from module import config, pkcsv
-from mylib import CameraCapture, SearchDB, CameraControl, PkTypeCompatibility, PkHash, CameraFrameForge, OcrRunner, OcrControl
+from mylib import CameraCapture, SearchDB, CameraControl, PkTypeCompatibility, PkHash, CameraFrameForge, OcrRunner
 
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
-# TODO:OCRを利用して、現在の相手のポケモンを表示する(開発中)
 class PkInfo_OCR(tk.Frame):
-    def __init__(self, master:tk, ocr_control: OcrControl, **kwargs):
+    def __init__(self, master:tk, ocr_runner: OcrRunner, **kwargs):
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("PKInfo2")
         self.logger.info("Called PkInfo2")
@@ -34,7 +33,7 @@ class PkInfo_OCR(tk.Frame):
         # self.camera_capture = camera_capture
         
         # OCR制御
-        self.ocr_control = ocr_control
+        self.ocr_runner = ocr_runner
         
         self.font = ("MS ゴシック", 15)
         
@@ -68,6 +67,7 @@ class PkInfo_OCR(tk.Frame):
         self.func_check_leveltext()
 
 
+    # スレッド化されていないのがmainloopに問題を出している？
     def func_check_leveltext(self) -> None:
         """
         レベル表示のテキストをOCRで検知した場合に、ポケモン名のOCRを実行する
@@ -75,31 +75,35 @@ class PkInfo_OCR(tk.Frame):
         # BUG: なんらかの問題で関数が再宣言されなくなる、after呼び出しではなくスレッド化するべき？
         logger = self.logger.getChild("func_check_leveltext")
         logger.debug("Run check_leveltext")
-        if self.ocr_control.activemode: # カメラが有効の場合
-            logger.debug("Camera is True")
+        try:
+            if self.ocr_runner.is_ocr_running: # カメラが有効の場合
+                logger.debug("Camera is True")
             
-            # OCRを実行する共通のフレームリスト
-            # frame_list = self.ocr_control.get_frame_list()
-            grayscale_frame_list = self.ocr_control.get_grayscale_framelist()
-            level_masked_frame = self.ocr_control.get_mask_frame(grayscale_frame_list, "level")
-            level_text = self.ocr_control.get_ocrtext(level_masked_frame, "level")
+                # OCRを実行する共通のフレームリスト
+                # frame_list = self.ocr_runner.get_frame_list()
+                grayscale_framelist = self.ocr_runner.get_grayscale_framelist()
+                # if len(grayscale_framelist) == 0:
+                #     self.after(1000, self.func_check_leveltext)
+                #     return
+                level_masked_frame = self.ocr_runner.get_masked_frame(grayscale_framelist, "level")
+                level_text = self.ocr_runner.get_ocr_text(level_masked_frame, "level")
             
-            logger.debug(f"Read OCR-level : {level_text}")
+                logger.debug(f"Read OCR(level) : {level_text}")
             
-            # FIXME: 検出誤差によってLvが含まれない場合がある
-            # FIXME レベルテキスト検知　-> ポケモン名検知でそれぞれ画像の取得タイミングが違う問題 ⇛ 取得値がNoneの時の問題？
-            if level_text != None:
-                if "Lv" in level_text:
-                    logger.info("Detected Namebox")
-                    name_masked_frame = self.ocr_control.get_mask_frame(grayscale_frame_list, "namebox")
-                    name_text = self.ocr_control.get_ocrtext(name_masked_frame, "namebox")
-                    if name_text is not None or name_text != "":
-                        self.func_search_name(name_text)
-        # else: # カメラが無効の場合
-        #     if self.ocr_control.activemode:
-        #         self.ocr_control.stop_ocr_thread()
-
-        self.after(1000, self.func_check_leveltext)
+                # FIXME: 検出誤差によってLvが含まれない場合がある
+                # FIXME レベルテキスト検知　-> ポケモン名検知でそれぞれ画像の取得タイミングが違う問題 ⇛ 取得値がNoneの時の問題？
+                if level_text != None:
+                    if "Lv" in level_text:
+                        logger.info("Detected Namebox")
+                        name_masked_frame = self.ocr_runner.get_masked_frame(grayscale_framelist, "namebox")
+                        name_text = self.ocr_runner.get_ocr_text(name_masked_frame, "namebox")
+                        logger.debug(f"Read OCR(pokemonbame) : {name_text}")
+                        if name_text is not None or name_text != "":
+                            self.func_search_name(name_text)
+        except Exception as e:
+            logger.error(f"Fault check leveltext : {e}")
+        finally:
+            self.after(1000, self.func_check_leveltext)
         
     # UI表記の更新
     def func_update_status(self, name:str, index:str, type1:str, type2:str)  -> None:
@@ -124,8 +128,9 @@ class PkInfo_OCR(tk.Frame):
         """
         logger = self.logger.getChild("func_search_name")
         logger.info(f"Execute func_search_name : {text}")
-        result_df = pkcsv._util.Name_search2csv(text)
-        if result_df is None:
+        result_df:pd.DataFrame = pkcsv._util.Name_search2csv(text)
+        if result_df.empty:
+            logger.info("No matching name found")
             return
         logger.debug(f"Found name: {text} -> {result_df.at[result_df.index[0], 'Name']}")
         try:
@@ -135,14 +140,14 @@ class PkInfo_OCR(tk.Frame):
                 type1 = result_df.at[result_df.index[0],"Type1"]
                 type2 = result_df.at[result_df.index[0],"Type2"]
                 self.func_update_status(name, index, type1, type2)
-        except:
-            logger.error(f"Fault search")
+        except Exception as e:
+            logger.error(f"Fault search : {e}")
 
 class CaptureControl(tk.Frame):
     """
     ゲームキャプチャをコントロールするパネルを作成するフレーム
     """
-    def __init__(self, master:tk, camera_capture:CameraCapture, ocr_control:OcrControl, **kwargs):
+    def __init__(self, master:tk, camera_capture:CameraCapture, ocr_runner:OcrRunner, **kwargs):
         """
         Args:
             master(tk):フレームを配置する親フレーム
@@ -153,7 +158,7 @@ class CaptureControl(tk.Frame):
         self.logger.info("Called CaptureControl")
 
         self.camera_control = CameraControl(camera_capture)
-        self.ocr_control = ocr_control
+        self.ocr_runner = ocr_runner
 
         self.flag_capture = False
         self.flag_orc = False
@@ -177,13 +182,13 @@ class CaptureControl(tk.Frame):
             self.flag_capture = False
             self.button_cap_control.config(text="キャプチャー起動") # テキストを変更
             self.camera_control.stop_capture()
-            self.ocr_control.stop_ocr_thread()
+            self.ocr_runner.stop_ocr_thread()
             self.logger.debug("Stopped capture")
         else: # キャプチャが無効の場合
             self.flag_capture = True
             self.button_cap_control.config(text="キャプチャー停止") # テキストを変更
             self.camera_control.start_capture()
-            self.ocr_control.start_ocr_thread()
+            self.ocr_runner.start_ocr_thread()
             self.logger.debug("Started capture")
 
     def func_screenshot(self)  -> None:
@@ -197,7 +202,8 @@ class CanvasGame(tk.Frame):
     """
     キャプチャ画面を写すフレーム
     """
-    # FIXME:フレーム描画処理が時々止まる(スレッド処理出来てない影響と思われる)
+    # FIXME:フレーム描画処理が時々止まる(スレッド処理出来てない影響と思われる) → フレーム取り出し時にカメラから直接取り出していたのが原因？
+    # FIXME: grayscale変換が連続して発生するタイミングで描画が遅くなる
     def __init__(self, master:tk, camera_capture:CameraCapture, **kwargs):
         """_summary_
 
@@ -235,7 +241,33 @@ class CanvasGame(tk.Frame):
 
         # デフォルト画面の設定
         self.set_default()
-        self.loop_update()
+        # self.loop_update()
+        
+        self.thread = threading.Thread(target=self.func_thread)
+        self.thread.daemon = True
+        self.thread.start()
+
+    def func_thread(self):
+        logger = self.logger.getChild("func_thread")
+        while True:
+            if self.camera_capture.is_capturing:
+                logger.info("Run loop_update")
+                ret, frame = self.camera_capture.get_frame()
+
+                if ret:
+                    frame = cv2.resize(frame, (self.width, self.height))
+
+                    self.photo = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
+                    # self.canvas_img.delete("all")
+                    self.canvas_img.create_image(0, 0, anchor=tk.NW, image=self.photo)
+                    self.canvas_img.image = self.photo
+                else:
+                    self.logger.debug("Frame is None")
+                #self.canvas_img.delete()
+            # else:
+            #     self.set_default()
+
+            time.sleep(0.01)
 
     def loop_update(self)  -> None:
         """
@@ -274,14 +306,14 @@ class CanvasPkBox(tk.Frame):
     """
     対戦開始時の相手の手持ちリストを撮影、表示するフレーム
     """
-    def __init__(self, master:tk, camera_capture:CameraCapture, ocr_control:OcrControl,**kwargs):
+    def __init__(self, master:tk, camera_capture:CameraCapture, ocr_runner:OcrRunner,**kwargs):
         super().__init__(master, **kwargs)
         self.logger = getLogger("Log").getChild("CanvasPkBox")
         self.logger.debug("Hello CanvasPkBox")
 
         self.camera_capture = camera_capture
 
-        self.ocr_control = ocr_control
+        self.ocr_runner = ocr_runner
         
         self.pkhash = PkHash()
         self.frame_forge = CameraFrameForge(camera_capture)
@@ -324,13 +356,13 @@ class CanvasPkBox(tk.Frame):
         logger = self.logger.getChild("update_pkbox")
         logger.debug("Execute update_pkbox")
         # print("CanvasPkBox.updateを実行")
-        if self.ocr_control.activemode: # カメラが有効だった場合
+        if self.ocr_runner.is_ocr_running: # カメラが有効だった場合
             
-            framelist = self.ocr_control.get_frame_list()
-            grayscale_framelist = self.ocr_control.get_grayscale_framelist()
+            framelist = self.ocr_runner.get_framelist()
+            grayscale_framelist = self.ocr_runner.get_grayscale_framelist()
             
-            masked_frame = self.ocr_control.get_mask_frame(grayscale_framelist, "rankbattle")
-            text = self.ocr_control.get_ocrtext(masked_frame, "rankbattle")
+            masked_frame = self.ocr_runner.get_masked_frame(grayscale_framelist, "rankbattle")
+            text = self.ocr_runner.get_ocr_text(masked_frame, "rankbattle")
             
             # 文字列の類似度計算
             if text is not None:
@@ -345,7 +377,7 @@ class CanvasPkBox(tk.Frame):
                 # if camera_frame is not None:
                 #     crop_frame = self.frame_forge.crop_frame(camera_frame)
                 
-                crop_frame = self.frame_forge.crop_frame(framelist[0], "pokemonbox")
+                crop_frame = self.frame_forge.crop_frame(framelist[-1], "pokemonbox")
                 self.func_save_pkbox(crop_frame)
         
         self.after(2000, self.update_pkbox)
