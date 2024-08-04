@@ -266,11 +266,12 @@ class CanvasGame(tk.Frame):
                     
                     self.canvas_img.image = self.photo
                 except Exception as e:
-                    logger.errpr("Fault create_canvas")
+                    logger.error("Fault create_canvas")
                     logger.exception(e)
 
             time.sleep(0.01)
 
+    
     def loop_update(self)  -> None:
         """
         画面更新のループ処理
@@ -883,4 +884,3 @@ class ClickMenu:
         # self.frame_basestatus.grid(row=0, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         self.frame_baseweaktype.grid(row=0,column=1,rowspan=2,sticky=tk.W+tk.E+tk.N+tk.S)
         self.canvas_status.get_tk_widget().grid(row=1,column=0)
-
