@@ -86,7 +86,7 @@ class CameraFrameForge():
         _, binaly_frame = cv2.threshold(frame, self.options[option]["thresh"], 255, cv2.THRESH_BINARY)
         return binaly_frame
     
-    def diff_frames(self, frame_list, option:str):
+    def diff_frames(self, frame_list:list, option:str):
         logger = self.logger.getChild("diff_frames")
         logger.debug("Execute diff_frames")
         base_img = frame_list[0]
@@ -107,5 +107,5 @@ class CameraFrameForge():
         try:
             cv2.imwrite("{}".format(filename),frame)
             self.logger.info(f"Save image to {filename}")
-        except:
-            self.logger.error("Can't save image")
+        except Exception as e:
+            self.logger.error(f"Fault save image : {e}")
