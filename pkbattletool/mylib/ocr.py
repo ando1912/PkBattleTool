@@ -21,10 +21,6 @@ PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 class OcrRunner:
     """
     キャプチャ画像に対して画像処理を行う
-    .frame=処理前画像
-    .cropped_frame=切り出し後画像
-    .binaly_frame=二値化処理後画像
-    .text=OCR分析結果
     """
     def __init__(self, camera_capture:CameraCapture):
         self.logger = getLogger("Log").getChild(f"OcrRunner")
@@ -45,7 +41,8 @@ class OcrRunner:
         self.list_ocr_option =  {
             # メッセージボックス
             "message":{
-                "thresh":200
+                "thresh":200,
+                "lang":"jpn"
                 },
             "level":{
                 "thresh":100,
@@ -68,6 +65,13 @@ class OcrRunner:
 
         self.ocr_thread = None
 
+    def close(self):
+        """
+        終了時の処理
+        """
+        self.stop_ocr_thread()
+        self.logger.info("Close OcrRunner")
+        
     def start_ocr_thread(self):
         self.logger.getChild("start_ocr_thread").info("Execute start_ocr_thread")
         self.is_ocr_running = True
