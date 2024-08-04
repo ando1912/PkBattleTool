@@ -179,8 +179,8 @@ class SubWindowMenu(tk.Toplevel):
                         caminfo[i] = "Active"
                     else:
                         caminfo[i] = "None"
-                except:
-                    self.logger.error("Coudn't get Camera-ID")
+                except Exception as e:
+                    self.logger.error(f"Fault get CameraID : {e}")
                 finally:
                     cap.release()
             return caminfo
