@@ -30,7 +30,6 @@ def gui_main():
     
     camera_capture = CameraCapture()
     ocr_runner = OcrRunner(camera_capture)
-    # ocr_control = OcrControl(OcrRunner(camera_capture))
 
     # フレームウェジットの作成
     # ポケモン情報簡易表示
@@ -51,8 +50,8 @@ def gui_main():
 
     # ウィンドウを閉じる時の処理
     def click_close():
-        frame_capturecontrol.camera_control.stop_capture()
-        frame_capturecontrol.camera_control.release_camera()
+        frame_capturecontrol.camera_capture.stop_capture()
+        frame_capturecontrol.camera_capture.release_camera()
         frame_pkinfo.ocr_runner.stop_ocr_thread()
         frame_canvaspkbox.ocr_runner.stop_ocr_thread()
         getLogger("Log").getChild("GUImain").info("Process end")
