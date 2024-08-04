@@ -1,4 +1,3 @@
-import cv2
 import os, sys
 import pandas as pd
 import Levenshtein
@@ -12,7 +11,7 @@ class PkCSV:
         self.logger.debug("Hello PkCSV")
         
         # csvデータファイル
-        self.filename = f"{PATH}/pokedb_SV.csv" 
+        self.filename = f"{PATH}/pokedb_SV.csv"
         
         self.pokemon_df = None
 
