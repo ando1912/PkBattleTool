@@ -116,7 +116,7 @@ class SubWindowMenu(tk.Toplevel):
         frame.pack(fill=tk.BOTH, pady=10)
 
         label_title = tk.Label(frame, text="ポケモン対戦支援ツール", font=("MSゴシック", "10", "bold")).pack()
-        label_version = tk.Label(frame, text="version beta 1.3").pack()
+        label_version = tk.Label(frame, text="version beta 2.0").pack()
         label_creator = tk.Label(frame, text="Create by Ando Ryoga").pack()
         button_close = tk.Button(frame, text="OK", command=lambda:self.close(self.sub_window)).pack()
 
