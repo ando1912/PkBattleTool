@@ -1,7 +1,6 @@
 import os, sys
 
 import configparser
-import datetime
 from logging import getLogger
 
 sys.path.append(".")
