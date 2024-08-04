@@ -53,55 +53,75 @@ class PkCSV:
     #         else:
     #             return None
     
-    def Name_search2csv(self, name:str) -> pd.DataFrame | None:
+    def Name_search2csv(self, name:str) -> pd.DataFrame:
         """
         ポケモン名をcsvファイルと照合し、合致するデータフレームを返す
+        
         Arg:
-        name:str ポケモンの名前
+            name[str] :  ポケモンの名前
         Return:
-        dataframe|None
+            dataframe|None
         """
-        if not isinstance(name,type(None)):
+        logger = self.logger.getChild("Name_search2csv")
+        logger.info(f"Call Search to csv-data : {name}")
+        
+        if name is None:
+            return pd.DataFrame()
+        else:
             # 図鑑のデータフレーム内に名前が見つかれば、そのまま返す
             if name in self.pokemon_df["Name"].values:
-                return self.pokemon_df[self.pokemon_df["Name"]==name]
+                result_df = self.pokemon_df[self.pokemon_df["Name"]==name]
+                logger.info(f"{name} was found")
+                return result_df
             # 見つからなければ、類似検索をかける
             else:
+                logger.info(f"{name} was not found")
                 return self.analyze_name(name)
     
-    def analyze_name(self,name:str) -> pd.DataFrame | None:
+    def analyze_name(self,name:str) -> pd.DataFrame:
         """
         与えられたポケモン名をcsvと照合し、類似する名前のデータフレームを返す
+        
         Arg:
-        name:str 検索したいポケモン名
+            name[str]: 検索したいポケモン名
         Return:
-        dataframe|None
+            dataframe|None
         """
-        if not isinstance(name,type(None)):
-            print("analyze_name={}".format(name))
-            index_distance = 0
-            index_ratio = 0
+        logger = self.logger.getChild("analyze_name")
+        logger.info("Call analyze_name")
+        #FIXME: エラーでreturnまで動かない？
+        if name is not None and name != "":
+            logger.debug(f"Analyze name is \"{name}\"")
+            # index_distance:int = 0
+            # index_ratio:int = 0
+            # min_distance:int = 99
+            # max_ratio:int = 0
+            
             min_distance = 99
             max_ratio = 0
+            min_distance_Key = None
+            max_ratio_Key = None
 
-            for Key, row in self.pokemon_df.iterrows():
-                # print(index)
+            for index, row in self.pokemon_df.iterrows():
                 # 編集距離の計算
-                name_distance = Levenshtein.distance(name, row["Name"])
+                name_distance = Levenshtein.distance(name, row.Name)
                 if min_distance > name_distance:
                     min_distance = name_distance
-                    min_distance_Key = Key
+                    min_distance_Key = index
                 # 類似度の計算
-                name_ratio = Levenshtein.ratio(name, row["Name"])
+                name_ratio = Levenshtein.ratio(name, row.Name)
                 if max_ratio < name_ratio:
                     max_ratio = name_ratio
-                    max_ratio_Key = Key
+                    max_ratio_Key = index
 
             # 編集距離と類似度分析でのインデックスが一致
-            if index_distance == index_ratio:
-                return self.pokemon_df[max_ratio_Key:max_ratio_Key]
+            # if index_distance == index_ratio:
+            #     return self.pokemon_df[max_ratio_Key:max_ratio_Key]
+            if min_distance_Key == max_ratio_Key:
+                return self.pokemon_df.loc[[min_distance_Key]]
             else:
-                return None
+                return pd.DataFrame()
+
 
 _util = PkCSV()
 

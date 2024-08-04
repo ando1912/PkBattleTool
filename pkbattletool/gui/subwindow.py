@@ -8,6 +8,9 @@ from logging import getLogger
 from mylib import PkHash
 
 class SubWindow(tk.Toplevel):
+    """
+    サブウィンドウ関連のクラス
+    """
     def __init__(self, master):
         self.root = master
         self.logger = getLogger("Log").getChild("SubWindow")
@@ -32,14 +35,17 @@ class SubWindow(tk.Toplevel):
             self.root_width,self.root_height,self.root_x, self.root_y = map(int, match.groups())
     
     def close(self, root):
-        self.logger.debug("Execute close")
         """
         引数として与えたrootを閉じる
         """
+        self.logger.info("Process end")
+        root.quit()
         root.destroy()
-    
-    # ポケモン情報を表示するウィンドウ
+        
     def view_pkinfo(self, key):
+        """
+        ポケモンの詳細情報の表示
+        """
         self.logger.debug("Execute view_pkinfo")
         # self.extract_coordinates()
         try:
