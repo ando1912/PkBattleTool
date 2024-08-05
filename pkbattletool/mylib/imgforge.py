@@ -1,7 +1,7 @@
 import os, sys
 import cv2
 from logging import getLogger
-
+import numpy as np
 from .webcam_capture import CameraCapture
 
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -58,7 +58,7 @@ class CameraFrameForge():
             frame:切り出し後のフレーム
         """
         logger = self.logger.getChild("crop_frame")
-        logger.debug("Execute crop_frame")
+        logger.debug("Run crop_frame")
         top = self.options[option]["top"]
         bottom = self.options[option]["bottom"]
         left = self.options[option]["left"]
@@ -68,27 +68,27 @@ class CameraFrameForge():
 
         return frame[top:bottom,left:right]
 
-    def grayscale_frame(self, frame):
+    def cvt_bgr2gray(self, frame:np.ndarray):
         """
         画像のグレースケール処理
         """
         logger = self.logger.getChild("grayscale_frame")
-        logger.debug("Execute grayscale_frame")
+        logger.debug("Run cvt_bgr2gray")
         return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    def binaly_frame(self,frame,option:str):
+    def cvt_gray2binaly(self, grayscale_frame: np.ndarray, option:str):
         """
         画像の二値化処理
         """
         logger = self.logger.getChild("binaly_frame")
-        logger.debug("Execute binaly_frame")
-        # _, binaly_frame = cv2.threshold(frame, self.frame_option["thresh"], 255, cv2.THRESH_BINARY)
-        _, binaly_frame = cv2.threshold(frame, self.options[option]["thresh"], 255, cv2.THRESH_BINARY)
+        logger.debug("Run cvt_gray2binaly")
+        _, binaly_frame = cv2.threshold(grayscale_frame, self.options[option]["thresh"], 255, cv2.THRESH_BINARY)
         return binaly_frame
     
-    def diff_frames(self, frame_list:list, option:str):
+    def diff_frames(self, frame_list:list[np.ndarray], option:str) -> np.ndarray:
         logger = self.logger.getChild("diff_frames")
-        logger.debug("Execute diff_frames")
+        logger.debug("Run diff_frames")
+        
         base_img = frame_list[0]
         for image in frame_list[1:]:
             # 画像の差分を計算
@@ -98,7 +98,7 @@ class CameraFrameForge():
             base_img = cv2.bitwise_and(base_img, base_img, mask=mask)
         return base_img
     
-    def save_frame(self, frame, filename):
+    def save_frame(self, frame:np.ndarray, filename:str):
         """
         Arg:
             frame:保存したいフレーム
