@@ -21,8 +21,6 @@ from .imgforge import CameraFrameForge
 from .webcam_capture import CameraCapture
 from module import config
 
-PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
-
 class OcrRunner:
     def __init__(self, camera_capture:CameraCapture):
         """OCR処理のクラス
@@ -37,6 +35,13 @@ class OcrRunner:
         self.camera_capture = camera_capture
 
         self.frame_forge = CameraFrameForge(camera_capture)
+        
+        # tesserac_pathの設定
+        if self.tesserac_path not in os.environ["PATH"].split(os.pathsep):
+            os.environ["PATH"] += os.pathsep + self.tesserac_path
+        
+        self.tools = pyocr.get_available_tools()
+        self.tool = self.tools[0]
         
         self.frame = None
         self.framelist = []
@@ -150,7 +155,7 @@ class OcrRunner:
         for grayscale_frame in grayscale_framelist:
             crop_frame = self.frame_forge.crop_frame(grayscale_frame, option)
             # 二値化
-            binary_frame = self.frame_forge.binaly_frame(crop_frame, option)
+            binary_frame = self.frame_forge.cvt_gray2binaly(crop_frame, option)
             
             binary_framelist.append(binary_frame)
         # フレームの差を求める
@@ -171,7 +176,7 @@ class OcrRunner:
                 logger.debug("Frame is None")
                 continue
             # グレースケール変換
-            gratscale_frame = self.frame_forge.grayscale_frame(frame)
+            gratscale_frame = self.frame_forge.cvt_bgr2gray(frame)
         
             logger.debug("Append framelist")
             self.framelist.append(frame)
@@ -198,6 +203,7 @@ class OcrRunner:
         self.logger.getChild("normalize_text").debug("Execute normalize_text")
         return re.compile('[!"#$%&\'\\\\()*+,-./:;<=>?@[\\]^_`{|}~「」〔〕“”〈〉『』【】＆＊・（）＄＃＠。、？！｀＋￥％ 　]').sub("",text)
 
+    # FIXME: 実行時に動作が重くなる
     def get_ocr_text(self, frame:np.ndarray, option:str) -> str:
         """画像に対してOCRでテキストを取得する
 
@@ -212,15 +218,8 @@ class OcrRunner:
         logger = self.logger.getChild("get_ocr_text")
         logger.info(f"Run get_ocr_text : {option}")
 
-        # tesserac_pathの設定
-        if self.tesserac_path not in os.environ["PATH"].split(os.pathsep):
-            os.environ["PATH"] += os.pathsep + self.tesserac_path
-        
-        tools = pyocr.get_available_tools()
-        tool= tools[0]
-
         PIL_Image = Image.fromarray(frame)
-        text = tool.image_to_string(
+        text = self.tool.image_to_string(
             PIL_Image,
             lang=self.list_ocr_option[option]["lang"],
             builder=pyocr.builders.TextBuilder(tesseract_layout=6))
