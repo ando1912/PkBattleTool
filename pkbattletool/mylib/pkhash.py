@@ -1,4 +1,6 @@
 """
+dHash値を使ってポケモンアイコン画像の類似検索を行う処理
+
 参考引用：https://note.com/kaseki_mtg/n/n6df12de8981a
 作者：暇士
 """
@@ -7,12 +9,14 @@ import os, sys
 import numpy as np
 import cv2
 from logging import getLogger
-from module import pkcsv
 
-PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
+from module import pkcsv
 
 class PkHash:
     def __init__(self):
+        """
+        dHash比較で類似画像を調べる処理
+        """
         self.logger = getLogger("Log").getChild("PkHash")
         self.logger.info("Called PkHash")
 
@@ -20,8 +24,8 @@ class PkHash:
 
     # ポケモン画像解析
     def RecognitionPokemonImages(self, crop_frame:np.ndarray) -> tuple[list[str], list[int], list[np.ndarray], list[np.ndarray]]:
-        """
-        手持ちの画像を6枚に分割する
+        """選出時の手持ちポケモンの画像を6枚に分割する
+        
         Args:
             crop_frame (np.ndarray]:手持ちポケモンの切り抜き画像い
         Returns:
@@ -48,7 +52,6 @@ class PkHash:
             cutframelist.append(cut_frame)
             
             outline_frame = self.GetImageByAllContours(cut_frame)
-            # BUG: 輝度が高いとうまくいかない可能性がある
             outline_iconllist.append(outline_frame)
             key, distance = self.GetPokemonNameFromImage(outline_frame)
             keylist.append(key)
@@ -60,8 +63,7 @@ class PkHash:
         return keylist, dislist, cutframelist, outline_iconllist
 
     def GetPokemonNameFromImage(self, frame:np.ndarray) -> tuple[str,int]:
-        """
-        輪郭短形で切り出したポケモン画像と最もdHash値が近い画像を探す
+        """輪郭短形で切り出したポケモン画像と最もdHash値が近い画像を探す
         
         Arg:
             frame (np.ndarray): ポケモン1匹の輪郭切り抜き画像
@@ -171,21 +173,3 @@ class PkHash:
         # cv2.CHAIN_APPROX_SIMPLE = 必要最小限の点を検出する
         contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         return contours
-
-def debug_PkCSV() -> None:
-    csv = pkcsv.PkCSV()
-    key="1000"
-    print(csv.pokemon_df[key:key][["Type1","Type2"]])
-    #print(pkcsv.pokemon_df.head(5))
-
-def debug_PkHash() -> None:
-    pkhash = PkHash()
-    keylist,dislist,_,_ = pkhash.RecognitionPokemonImages(cv2.imread(f"{PATH}/debug/screenshot_240105101126.png"))
-    print(keylist,dislist)
-    csv = pkcsv.PkCSV()
-    df2 = csv.pokemon_df.loc[keylist]
-    print(df2)
-
-if __name__ == "__main__":
-    PATH = os.path.abspath(os.path.join(PATH, os.pardir))
-    debug_PkHash()
