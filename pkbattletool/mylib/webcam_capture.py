@@ -34,13 +34,7 @@ class CameraCapture:
         self.is_capturing:bool = False
         self.capture_thread:Thread = None
         self.frame:cv2.typing.MatLike = None
-        
-        # 録画設定
-        fourcc = cv2.VideoWriter_fourcc("m","p","4","v")
-        name = "sample.mp4"
-        self.video = cv2.VideoWriter(name, fourcc, int(self.display_fps), (int(self.width), int(self.height)))
-        
-        self.is_record:bool = False
+    
     
     def start_capture(self) -> None:
         """
@@ -71,8 +65,6 @@ class CameraCapture:
             if ret:
                 logger.debug("save frame")
                 self.frame = frame
-                if self.is_record:
-                    self.video.write(frame)
             
     def get_frame(self) -> np.ndarray:
         """カメラの画像を取得する
