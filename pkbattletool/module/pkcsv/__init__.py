@@ -3,15 +3,13 @@ import pandas as pd
 import Levenshtein
 from logging import getLogger
 
-PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
-
 class PkCSV:
     def __init__(self):
         self.logger = getLogger("Log").getChild("PkCSV")
         self.logger.debug("Hello PkCSV")
         
         # csvデータファイル
-        self.filename = f"{PATH}/pokedb_SV.csv"
+        self.filename = f"resources/pokedb_SV.csv"
         
         self.pokemon_df = None
 
@@ -32,25 +30,6 @@ class PkCSV:
     
     def WriteCSV(self, new_df):
         new_df.to_csv(self.filename, mode="w", encoding="shift-jis")
-    
-    # def SearchKey2CSV(self,key:str) -> dict[str]:
-    #     """
-    #     図鑑番号からjsonの情報を取得
-    #     """
-    #     self.logger.debug(f"Execute SearchKey2CSV: key={key}")
-    #     return self.pokemon_df[key:key]
-    
-    # def key_search2csv(self, key:str) -> pd.DataFrame | None:
-    #     """
-    #     識別番号でcsvを検索する
-    #     """
-    #     self.logger.debug("Execute key_search2csv")
-    #     if not isinstance(key, type(None)):
-    #         if key in self.pokemon_df["Key"].values:
-    #             self.logger.debug(f"Found Key:{key}")
-    #             return self.pokemon_df[key]
-    #         else:
-    #             return None
     
     def Name_search2csv(self, name:str) -> pd.DataFrame:
         """
@@ -88,13 +67,8 @@ class PkCSV:
         """
         logger = self.logger.getChild("analyze_name")
         logger.info("Call analyze_name")
-        #FIXME: エラーでreturnまで動かない？
         if name is not None and name != "":
             logger.debug(f"Analyze name is \"{name}\"")
-            # index_distance:int = 0
-            # index_ratio:int = 0
-            # min_distance:int = 99
-            # max_ratio:int = 0
             
             min_distance = 99
             max_ratio = 0
@@ -114,8 +88,6 @@ class PkCSV:
                     max_ratio_Key = index
 
             # 編集距離と類似度分析でのインデックスが一致
-            # if index_distance == index_ratio:
-            #     return self.pokemon_df[max_ratio_Key:max_ratio_Key]
             if min_distance_Key == max_ratio_Key:
                 return self.pokemon_df.loc[[min_distance_Key]]
             else:
