@@ -7,26 +7,20 @@
 
 [![用イメージ動画](http://img.youtube.com/vi/CFl7r83tzaI/hqdefault.jpg)](https://youtu.be/CFl7r83tzaI)
 
-# 動作環境
-Python
-現状実行ファイル化はしていないので、各自環境を構成する必要あり
+# 開発環境
+- Python 3.11.9
+- Anaconda
 
-## 使用ライブラリ
-1. GUI系
-   - tkinter
-2. 画像処理
-   - pandas
-   - PIL
-   - opencv2
-   - numpy
-   - matplotlib
-   - re
-3. 外部アクセス
-   - webbrowser
-4. システム系
-   - threading
-   - logging
-   - datetime
+## 環境構築
+```console
+cd pkbattletool
+pip install -r requirements.txt
+```
+
+## 実行
+```concole
+python main.py
+```
 
 ---
 # 使用技術
