@@ -6,7 +6,6 @@ import datetime
 from logging import getLogger
 
 from module import config
-PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 import numpy as np
 
@@ -93,15 +92,15 @@ class CameraCapture:
         logger.debug("Execute save_frame")
         # screenshot保存フォルダがなかった場合にフォルダを作成する
         try:
-            if os.path.exists(f"{PATH}/{self.screenshot_folder_path}"):
-                os.mkdir(f"{PATH}/{self.screenshot_folder_path}")
+            if os.path.exists(f"{self.screenshot_folder_path}"):
+                os.mkdir(f"{self.screenshot_folder_path}")
                 logger.info(f"Success makedir {self.screenshot_folder_path}")
         except Exception as e:
             logger.error(f"Fault makedir {self.screenshot_folder_path}")
             logger.exception(e)
         file_name = f"screenshot_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}"
         try:
-            cv2.imwrite(f"{PATH}/{self.screenshot_folder_path}/{file_name}.png", self.frame)
+            cv2.imwrite(f"{self.screenshot_folder_path}/{file_name}.png", self.frame)
             print("save as {}".format(file_name))
         except Exception as e:
             self.logger.error(f"Fault save image")
