@@ -1,15 +1,20 @@
 import tkinter as tk
-import re
 import cv2
 from logging import getLogger
 
+import webbrowser
+
+from multiprocessing import Pool
+
 from module import config
 
-# メニューバーを作成するクラス
 class MenuBar(tk.Menu):
-    # TODO サブウィンドウが表示されていた場合は追加で表示しないようにする
-    
     def __init__(self, master: tk.Tk, **kwargs):
+        """メニューバーの表示
+
+        Args:
+            master (tk.Tk): メニューバーを表示する親ウィンドウ
+        """
         super().__init__(master, **kwargs)
         self.root = master
         master.config(menu=self)
@@ -32,7 +37,10 @@ class MenuBar(tk.Menu):
         help_menu.add_command(label="バージョン情報", command=self.on_versioninfo)
         self.add_cascade(label="ヘルプ", menu=help_menu)
     
-    def on_setting(self):
+    def on_setting(self) -> None:
+        """
+        環境設定
+        """
         self.logger.debug("Execute on_setting")
         if self.subwindow is None or not tk.Toplevel.winfo_exists(self.subwindow):
             self.subwindow = tk.Toplevel(self.root)
@@ -47,7 +55,10 @@ class MenuBar(tk.Menu):
         else:
             self.subwindow.lift()
 
-    def on_exit(self):
+    def on_exit(self) -> None:
+        """
+        終了確認
+        """
         self.logger.debug("Execute on_exit")
         if self.subwindow is None or not tk.Toplevel.winfo_exists(self.subwindow):
 
@@ -63,12 +74,15 @@ class MenuBar(tk.Menu):
             self.subwindow.lift()
         
     def on_versioninfo(self):
+        """
+        バージョン情報を表示
+        """
         self.logger.debug("Execute on_versioninfo")
         if self.subwindow is None or not tk.Toplevel.winfo_exists(self.subwindow):
             self.subwindow = tk.Toplevel(self.root)
             self.subwindow.title = ("バージョン情報")
             width = 300
-            height = 150
+            height = 120
             self.set_subwindow_geometry(width, height)
             
             frame = VersionInfo(self.subwindow)
@@ -76,18 +90,27 @@ class MenuBar(tk.Menu):
         else:
             self.subwindow.lift()
     
-    def set_subwindow_geometry(self, width, height):
+    def set_subwindow_geometry(self, width:int, height:int) -> None:
+        """画面サイズと位置の設定
+
+        Args:
+            width (int): 横幅
+            height (int): 縦幅
+        """
         self.subwindow.geometry("{}x{}+{}+{}".format(
                 width,
                 height,
                 int(self.root.winfo_x()+self.root.winfo_width()/2-width/2),
                 int(self.root.winfo_y()+self.root.winfo_height()/2-height/2)))
-        
-
-# サブウィンドウのフレームクラス
 
 class VersionInfo(tk.Frame):
     def __init__ (self, master:tk.Toplevel, **kwargs):
+        """バージョン情報を表示するクラス
+        参考：https://tomtom-stock.com/2022/03/01/tkinter-texthyperlink/
+
+        Args:
+            master (tk.Toplevel): 親のサブウィンドウ
+        """
         super().__init__(master, **kwargs)
         self.root = master
         
@@ -95,7 +118,10 @@ class VersionInfo(tk.Frame):
         self.logger.info("Run VersionInfo")
 
         label_title = tk.Label(self, text="ポケモン対戦支援ツール", font=("MSゴシック", "10", "bold")).pack()
-        label_version = tk.Label(self, text="version beta 2.0").pack()
+        label_version = tk.Label(self, text="version beta 2.1").pack()
+        label_githublink = tk.Label(self, text="https://github.com/ando1912/PkBattleTool", fg="blue", cursor="hand1")
+        label_githublink.pack()
+        label_githublink.bind("<Button-1>", lambda e:webbrowser.open_new("https://github.com/ando1912/PkBattleTool"))
         label_creator = tk.Label(self, text="Create by Ando Ryoga").pack()
         button_close = tk.Button(self, text="OK", command=self.close).pack()
 
@@ -108,10 +134,14 @@ class VersionInfo(tk.Frame):
         self.root.destroy()
 
 class CloseSoftware(tk.Frame):
-    """
-    アプリ終了の確認ポップアップ
-    """
-    def __init__(self, master, app):
+
+    def __init__(self, master:tk.Toplevel, app:tk.Tk):
+        """アプリ終了の確認ポップアップ
+
+        Args:
+            master (tk.Toplevel): サブウィンドウ
+            app (tk.Tk): メインウィンドウ
+        """
         super().__init__(master)
         self.logger = getLogger("Log").getChild("CloseSoftware")
         self.logger.info("Run CloseSoftware")
@@ -124,20 +154,20 @@ class CloseSoftware(tk.Frame):
         button_yes = tk.Button(self, text="はい", command=self.close_app).grid(row=1,column=0)
         button_no = tk.Button(self, text="いいえ", command=self.close).grid(row=1,column=1)
     
-    def close(self):
+    def close(self) -> None:
         """
         ウィンドウを閉じる
         """
         self.root.destroy()
     
-    def close_app(self):
+    def close_app(self) -> None:
         """
         アプリケーションを終了させる
         """
         self.app.click_close()
 
 class SettingInfo(tk.Frame):
-    #FIXME: カメラのID調査で動作が止まる、スレッド化したい
+    #FIXME: カメラのID調査で処理が止まる
     def __init__(self, master:tk.Toplevel, **kwargs):
         super().__init__(master, **kwargs)
         self.root = master
@@ -225,20 +255,28 @@ class SettingInfo(tk.Frame):
         """
         self.root.destroy()
     
+    def check_activecam(self, id:int) -> bool:
+        cap = cv2.VideoCapture(id)
+        if cap.isOpened():
+            cap.release()
+            return True
+        else:
+            cap.release()
+            
+            return False
     # カメラのID一覧を取得
-    def getCamInfo(self):
+    def getCamInfo(self) -> dict:
         caminfo = {}
-        for i in range(0,10):
+
+        for i in range(6):
             try:
                 cap = cv2.VideoCapture(i)
-                if cap.isOpened():
-                    caminfo[i] = "Active"
-                else:
-                    caminfo[i] = "None"
+                caminfo[i] = "Active" if cap.isOpened() else "None"
             except Exception as e:
-                self.logger.error(f"Fault get CameraID : {e}")
+                self.logger.exception(e)
             finally:
                 cap.release()
+
         return caminfo
     
     def update_config(self):

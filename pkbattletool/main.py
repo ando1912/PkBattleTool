@@ -7,8 +7,6 @@ from gui import MenuBar, PkInfo_OCR, CanvasGame, CaptureControl, CanvasPkBox
 
 import datetime
 
-PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
-
 class MainWindow(tk.Frame):
     def __init__(self, master:tk.Tk=None):
         super().__init__(master)
@@ -92,9 +90,9 @@ def setup_logging() -> Logger:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    if not os.path.exists(f"{PATH}/log/"):
-        os.mkdir(f"{PATH}/log")
-    log_path = f"{PATH}/log/log_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}.txt"
+    if not os.path.exists(f"log/"):
+        os.mkdir("log/")
+    log_path = f"log/log_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}.txt"
     fh = FileHandler(filename=log_path)
     fh.setLevel(LOGGER_LEVEL)
     fh.setFormatter(formatter)

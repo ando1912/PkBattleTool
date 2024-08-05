@@ -1,31 +1,38 @@
 """
+dHash値を使ってポケモンアイコン画像の類似検索を行う処理
+
 参考引用：https://note.com/kaseki_mtg/n/n6df12de8981a
 作者：暇士
 """
 import os, sys
 
+import numpy as np
 import cv2
 from logging import getLogger
-from module import pkcsv
 
-PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
+from module import pkcsv
 
 class PkHash:
     def __init__(self):
+        """
+        dHash比較で類似画像を調べる処理
+        """
         self.logger = getLogger("Log").getChild("PkHash")
         self.logger.info("Called PkHash")
 
         self.crop_frame = None # ポケモン一覧画像
 
     # ポケモン画像解析
-    def RecognitionPokemonImages(self, crop_frame:cv2.typing.MatLike) -> tuple[list, list, list, list]:
-        """
-        手持ちの画像を6枚に分割する
-        Return:
-            keylist[str]:図鑑番号
-            dislist[int]:編集距離
-            cutframelist[MatLike]:6分切り出し画像
-            outline_iconlist[MatLike]:輪郭切り出し画像
+    def RecognitionPokemonImages(self, crop_frame:np.ndarray) -> tuple[list[str], list[int], list[np.ndarray], list[np.ndarray]]:
+        """選出時の手持ちポケモンの画像を6枚に分割する
+        
+        Args:
+            crop_frame (np.ndarray]:手持ちポケモンの切り抜き画像い
+        Returns:
+            keylist (str): ポケモンの識別キーリスト
+            dislist (int): 編集距離リスト
+            cutframelist (np.ndarray): 6分割した切り出し画像リスト
+            outline_iconlist (np.ndarray): 輪郭切り出し画像リスト
         """
         logger = self.logger.getChild("RecognitionPokemonImages") # loggerの設定
         logger.debug("Execute RecognitionPokemonImages")
@@ -34,17 +41,17 @@ class PkHash:
         img_pokemon_height = int(height / 6)
 
         # リストの初期化
-        keylist: list[str] = []
-        dislist:list[int] = []
-        cutframelist = []
-        outline_iconllist = []
+        keylist: list[str] = [] # キーリスト
+        dislist:list[int] = [] # 編集距離のリスト
+        cutframelist:list[np.ndarray] = [] # 切り抜き画像(枠)
+        outline_iconllist:list[np.ndarray] = [] # 切り抜きリスト(輪郭)
+        
         for i in range(0, 6):
             y = int(height / 6 * i)
             cut_frame = crop_frame[y:y+img_pokemon_height, 0:width]
             cutframelist.append(cut_frame)
             
             outline_frame = self.GetImageByAllContours(cut_frame)
-            # BUG: 輝度が高いとうまくいかない可能性がある
             outline_iconllist.append(outline_frame)
             key, distance = self.GetPokemonNameFromImage(outline_frame)
             keylist.append(key)
@@ -55,15 +62,14 @@ class PkHash:
         logger.error("Fault to run cut_frame")
         return keylist, dislist, cutframelist, outline_iconllist
 
-    def GetPokemonNameFromImage(self, frame: cv2.typing.MatLike) -> tuple[str,int]:
-        """
-        輪郭短形で切り出したポケモン画像と最もdHash値が近い画像を探す
+    def GetPokemonNameFromImage(self, frame:np.ndarray) -> tuple[str,int]:
+        """輪郭短形で切り出したポケモン画像と最もdHash値が近い画像を探す
         
         Arg:
-            frame:cv2の画像フレーム
-        Return:
-            index[str]:最小キー
-            distance[int]:Hash値の編集距離
+            frame (np.ndarray): ポケモン1匹の輪郭切り抜き画像
+        Returns:
+            index (str): 類似度が最初の識別キー
+            distance (int): Hash値の編集距離
         """
         logger = self.logger.getChild("GetPokemonNameFromImage")
         logger.debug("Execute GetPokemonNameFromImage")
@@ -85,10 +91,12 @@ class PkHash:
         return min_key, dic[min_key]
 
     def CalcHammingDistance(self, hash1: str, hash2: str) -> int:
-        """
-        dHash差分を計算
+        """dHash差分を計算
         
-        Return:
+        Args:
+            hash1[str]:dHash値①
+            hash2[str]:dHash値②
+        Returns:
             result[int]:2つのdHashの差分の数
         """
         # ループ内処理のためログ出力を省略
@@ -101,9 +109,12 @@ class PkHash:
                 result += 1
         return result
 
-    def CalcPerceptualDhash(self, frame: cv2.typing.MatLike) -> str:
-        """
-        画像のdHashを算出する
+    def CalcPerceptualDhash(self, frame: np.ndarray) -> str:
+        """画像のdHashを算出する
+        Args:
+            frame[np.ndarray]:dHash値を算出したい画像
+        Returns:
+            dhash[str]:算出したdHash値
         """
         self.logger.debug("Execute CalcPercepturalDhash")
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -116,10 +127,13 @@ class PkHash:
 
         return dhash
 
-    def GetImageByAllContours(self, frame: cv2.typing.MatLike) -> cv2.typing.MatLike:
+    def GetImageByAllContours(self, frame: np.ndarray) -> np.ndarray:
         # FIXME: フレーム上下の境界ラインが接触してしまい、トリミングに失敗する場合がある
-        """
-        画像内の全ての輪郭に外接する長方形を切り出す
+        """ 画像内の全ての輪郭に外接する長方形を切り出す
+        Args:
+            frame[np.ndarray]: 6分割したポケモンのアイコン画像
+        Returns:
+            frame[np.ndarray]: ポケモンの輪郭で切り抜いた画像
         """
         logger = self.logger.getChild("GetImageByAllContours")
         logger.debug("Execute GetImageByAllContours")
@@ -146,9 +160,12 @@ class PkHash:
 
         return frame[rect["y1"]:rect["y2"], rect["x1"]:rect["x2"]]
 
-    def FindContours(self, binary_img:cv2.typing.MatLike):
-        """
-        輪郭抽出
+    def FindContours(self, binary_img:np.ndarray):
+        """輪郭抽出
+        Args:
+            binary_img[np.ndarray]:2値化したポケモンアイコンの切り抜き画像
+        Returns:
+            contours
         """
         self.logger.debug("Execute FindContours")
         # 輪郭の抽出
@@ -156,21 +173,3 @@ class PkHash:
         # cv2.CHAIN_APPROX_SIMPLE = 必要最小限の点を検出する
         contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         return contours
-
-def debug_PkCSV() -> None:
-    csv = pkcsv.PkCSV()
-    key="1000"
-    print(csv.pokemon_df[key:key][["Type1","Type2"]])
-    #print(pkcsv.pokemon_df.head(5))
-
-def debug_PkHash() -> None:
-    pkhash = PkHash()
-    keylist,dislist,_,_ = pkhash.RecognitionPokemonImages(cv2.imread(f"{PATH}/debug/screenshot_240105101126.png"))
-    print(keylist,dislist)
-    csv = pkcsv.PkCSV()
-    df2 = csv.pokemon_df.loc[keylist]
-    print(df2)
-
-if __name__ == "__main__":
-    PATH = os.path.abspath(os.path.join(PATH, os.pardir))
-    debug_PkHash()
