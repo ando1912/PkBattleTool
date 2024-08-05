@@ -10,15 +10,17 @@ PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 
 
-def check_camera_connection_display(save_flag=False):
-    """
-    PCに接続されたカメラを順番に確認して表示する
+def check_camera_connection_display(limit=10, save_flag=False):
+    """PCに接続されたカメラを順番に確認して表示する
 
+    Args:
+        limit (int, optional): カメラIDの上限. Defaults to 10.
+        save_flag (bool, optional): 画像保存のオプション. Defaults to False.
     """
     logger.info("Process Start")
     true_camera_is = []
 
-    for camera_number in range(0, 10):# ID10まで総当り
+    for camera_number in range(0, limit):# ID10まで総当り
         cap = cv2.VideoCapture(camera_number,cv2.CAP_DSHOW)
 
         ret, frame = cap.read()
@@ -92,7 +94,8 @@ if __name__ == '__main__':
     
     # 引数の設定
     parser = argparse.ArgumentParser()
-    parser.add_argument("--save", help="画像の保存", action="store_true")
+    parser.add_argument("-l", "--limit", help="検索するカメラIDの上限", default=10)
+    parser.add_argument("-s", "--save", help="画像の保存", action="store_true")
     args = parser.parse_args()
     
-    check_camera_connection_display(save_flag=args.save)
+    check_camera_connection_display(limit=int(args.limit), save_flag=args.save)
