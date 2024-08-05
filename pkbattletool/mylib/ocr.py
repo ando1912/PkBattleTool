@@ -1,3 +1,8 @@
+"""
+OCR実行処理をまとめたクラス
+
+"""
+
 import os, sys
 
 import cv2
@@ -19,17 +24,16 @@ from module import config
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class OcrRunner:
-    """
-    キャプチャ画像に対して画像処理を行う
-    """
-
     def __init__(self, camera_capture:CameraCapture):
+        """OCR処理のクラス
+
+        Args:
+            camera_capture (CameraCapture): カメラキャプチャー
+        """
         self.logger = getLogger("Log").getChild(f"OcrRunner")
         self.logger.info(f"Called OcrRunner")
 
         self.tesserac_path = config.get("DEFAULT","tesseract_path")
-
-        self.option = ocr_option
         self.camera_capture = camera_capture
 
         self.frame_forge = CameraFrameForge(camera_capture)
@@ -69,14 +73,17 @@ class OcrRunner:
 
         self.ocr_thread = None
 
-    def close(self):
+    def close(self) -> None:
         """
         終了時の処理
         """
         self.stop_ocr_thread()
         self.logger.info("Close OcrRunner")
         
-    def start_ocr_thread(self):
+    def start_ocr_thread(self) -> None:
+        """
+        スレッド開始処理
+        """
 
         self.logger.getChild("start_ocr_thread").info("Execute start_ocr_thread")
 
@@ -85,7 +92,10 @@ class OcrRunner:
         self.ocr_thread.daemon = True
         self.ocr_thread.start()
 
-    def stop_ocr_thread(self):
+    def stop_ocr_thread(self) -> None:
+        """
+        スレッド停止処理
+        """
         self.logger.getChild("stop_ocr_thread").info("Execute stop_ocr_thread")
         self.is_ocr_running = False
         
@@ -93,26 +103,46 @@ class OcrRunner:
         self.grayscale_framelist = []
     
 
-    def get_frame(self) -> cv2.typing.MatLike:
+    def get_frame(self) -> np.ndarray:
 
         """
         カメラからフレームを取得
         return:
-            frame
+            frame[np.ndarray] : 最新のカメラフレーム
         """
         return  self.camera_capture.get_frame()
     
-    def get_framelist(self) -> list:
+    def get_framelist(self) -> list[np.ndarray]:
+        """フレームリストの取得
+
+        Returns:
+            list[np.ndarray]: カメラフレームが入ったリスト
+        """
         self.logger.getChild("get_framelist").info("Run get_frame")
         return self.framelist
 
-    def get_grayscale_framelist(self) -> list:
+    def get_grayscale_framelist(self) -> list[np.ndarray]:
+        """グレースケールフレームリストの取得
+
+        Returns:
+            list[np.ndarray]: グレースケール変換されたフレームが入ったリスト
+        """
         self.logger.getChild("get_grayscale_framelist").info("Run get_grayscale_frame")
 
         return self.grayscale_framelist
+
     
     # for文実施時に処理が重くなる(画面描画が止まる)
-    def get_masked_frame(self, grayscale_framelist:list,  option:str):
+    def get_masked_frame(self, grayscale_framelist:list[np.ndarray],  option:str) -> np.ndarray:
+        """画像の共通部分を抽出したフレームの取得
+
+        Args:
+            grayscale_framelist (list[np.ndarray]): グレースケール変換されたフレームリスト
+            option (str): 変換オプション
+
+        Returns:
+            frame (np.ndarray): マスク処理をした画像
+        """
         logger = self.logger.getChild("masked_frame")
         logger.info("Run masked_frame")
         binary_framelist = []
@@ -127,7 +157,10 @@ class OcrRunner:
         frame = self.frame_forge.diff_frames(binary_framelist, option)
         return frame
 
-    def run_ocr_thread(self):
+    def run_ocr_thread(self) -> None:
+        """
+        OCRスレッドの開始処理
+        """
         logger = self.logger.getChild("run_ocr_thread")
         
         logger.info("Execute run_ocr_thread")
@@ -144,7 +177,7 @@ class OcrRunner:
             self.framelist.append(frame)
             self.grayscale_framelist.append(gratscale_frame)
             
-            if len(self.framelist) > 5: # 規定以上の枚数になったら古いフレームから削除
+            if len(self.framelist) > 10: # 規定以上の枚数になったら古いフレームから削除
                 self.framelist.pop(0)
                 self.grayscale_framelist.pop(0)
             
@@ -152,29 +185,46 @@ class OcrRunner:
 
     def normalize_text(self, text:str) -> str:
         """
-        記号文字などを削除する
+        OCRで取得したテキストから記号等を削除する
+        参考:https://qiita.com/ganyariya/items/42fc0ed3dcebecb6b117
+        
+        Args:
+            text (str): 処理前のテキスト
+
+        Returns:
+            str: 処理後のテキスト
         """
 
         self.logger.getChild("normalize_text").debug("Execute normalize_text")
         return re.compile('[!"#$%&\'\\\\()*+,-./:;<=>?@[\\]^_`{|}~「」〔〕“”〈〉『』【】＆＊・（）＄＃＠。、？！｀＋￥％ 　]').sub("",text)
 
-    def get_ocr_text(self, frame, option=str) -> str:
+    def get_ocr_text(self, frame:np.ndarray, option:str) -> str:
+        """画像に対してOCRでテキストを取得する
 
+        Args:
+            frame (np.ndarray): テキストを取得したい画像
+            option (str): 認識オプション
+
+        Returns:
+            str: 認識したテキスト
+        """
 
         logger = self.logger.getChild("get_ocr_text")
         logger.info(f"Run get_ocr_text : {option}")
 
+        # tesserac_pathの設定
         if self.tesserac_path not in os.environ["PATH"].split(os.pathsep):
             os.environ["PATH"] += os.pathsep + self.tesserac_path
         
         tools = pyocr.get_available_tools()
         tool= tools[0]
 
-
         PIL_Image = Image.fromarray(frame)
         text = tool.image_to_string(
             PIL_Image,
             lang=self.list_ocr_option[option]["lang"],
             builder=pyocr.builders.TextBuilder(tesseract_layout=6))
+        
+        text = self.normalize_text(text)
         
         return text
