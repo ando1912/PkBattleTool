@@ -121,7 +121,7 @@ class VersionInfo(tk.Frame):
         self.logger.info("Called VersionInfo")
 
         label_title = tk.Label(self, text="ポケモン対戦支援ツール", font=("MSゴシック", "10", "bold")).pack()
-        label_version = tk.Label(self, text="version beta 2.1").pack()
+        label_version = tk.Label(self, text="version beta 2.1.0").pack()
         label_githublink = tk.Label(self, text="https://github.com/ando1912/PkBattleTool", fg="blue", cursor="hand1")
         label_githublink.pack()
         label_githublink.bind("<Button-1>", lambda e:webbrowser.open_new("https://github.com/ando1912/PkBattleTool"))
