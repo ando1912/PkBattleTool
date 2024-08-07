@@ -188,10 +188,10 @@ class OcrRunner:
             
             time.sleep(0.01)
 
+    # 参考:https://qiita.com/ganyariya/items/42fc0ed3dcebecb6b117
     def normalize_text(self, text:str) -> str:
         """
         OCRで取得したテキストから記号等を削除する
-        参考:https://qiita.com/ganyariya/items/42fc0ed3dcebecb6b117
         
         Args:
             text (str): 処理前のテキスト
