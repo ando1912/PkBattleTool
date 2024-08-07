@@ -129,6 +129,13 @@ class PkInfo_OCR(tk.Frame):
                         logger.debug(f"Read OCR(pokemonbame) : {name_text}")
                         if name_text is not None or name_text != "":
                             self.func_search_name(name_text)
+                
+                # grayscale_framelist = self.ocr_runner.get_grayscale_framelist()
+                # name_masked_frame = self.ocr_runner.get_masked_frame(grayscale_framelist, "namebox")
+                # name_text = self.ocr_runner.get_ocr_text(name_masked_frame, "namebox")
+                # logger.debug(f"Read OCR(pokemonbame) : {name_text}")
+                # if name_text is not None or name_text != "":
+                #     self.func_search_name(name_text)
         except Exception as e:
             logger.error(f"Fault check leveltext : {e}")
         finally:
@@ -144,7 +151,7 @@ class PkInfo_OCR(tk.Frame):
             type1 (str): タイプ１
             type2 (str): タイプ２
         """
-        self.logger.debug("Execute func_update_status")
+        self.logger.getChild("func_update_status").debug("Run func_update_status")
         self.label_value_name["text"] = name
         self.label_value_index["text"] = index
         self.label_value_type1["text"] = type1
@@ -152,7 +159,7 @@ class PkInfo_OCR(tk.Frame):
 
     def func_searchdb(self)  -> None:
         """ポケモンバトルDBを検索"""
-        self.logger.debug("Execute func_searchdb")
+        self.logger.getChild("func_searchdb").debug("Run func_searchdb")
         name = self.label_value_name["text"]
         SearchDB().searchdb(name)
 
@@ -163,10 +170,10 @@ class PkInfo_OCR(tk.Frame):
             text (str): OCRで読み取ったポケモン名
         """
         logger = self.logger.getChild("func_search_name")
-        logger.info(f"Execute func_search_name : {text}")
+        logger.info(f"Run func_search_name : {text}")
         result_df:pd.DataFrame = pkcsv._util.Name_search2csv(text)
         if result_df.empty:
-            logger.info("No matching name found")
+            logger.debug("No matching name found")
             return
         logger.debug(f"Found name: {text} -> {result_df.at[result_df.index[0], 'Name']}")
         try:
@@ -213,25 +220,26 @@ class CaptureControl(tk.Frame):
         """
         キャプチャー起動ボタンが押されたときの処理
         """
-        self.logger.debug("Execute func_cap_control")
+        logger = self.logger.getChild("func_cap_control")
+        logger.info("Run func_cap_control")
         if self.flag_capture: # キャプチャが有効の場合
             self.flag_capture = False
             self.button_cap_control.config(text="キャプチャー起動") # テキストを変更
             self.camera_capture.stop_capture()
             self.ocr_runner.stop_ocr_thread()
-            self.logger.debug("Stopped capture")
+            logger.info("Stopped capture")
         else: # キャプチャが無効の場合
             self.flag_capture = True
             self.button_cap_control.config(text="キャプチャー停止") # テキストを変更
             self.camera_capture.start_capture()
             self.ocr_runner.start_ocr_thread()
-            self.logger.debug("Started capture")
+            logger.info("Started capture")
 
     def func_screenshot(self)  -> None:
         """
         スクリーンショットボタンが押された時の処理
         """
-        self.logger.debug("Execute func_screenshot")
+        self.logger.getChild("func_screenshot").debug("Run func_screenshot")
         self.camera_capture.save_frame()
 
     def close(self) -> None:
@@ -308,7 +316,7 @@ class CanvasGame(tk.Frame):
         """キャンバスを更新する
         """
         logger = self.logger.getChild("func_update_canvas")
-        logger.info("Run func_update_canvas")
+        logger.debug("Run func_update_canvas")
         frame = self.camera_capture.get_frame()
 
         try:
@@ -325,6 +333,7 @@ class CanvasGame(tk.Frame):
         """
         デフォルト画像をcanvasにセットする
         """
+        self.logger.getChild("set_default").debug("Run set_default")
         frame = self.default_image
         self.photo = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
         self.canvas_img.delete("all")
@@ -385,7 +394,7 @@ class CanvasPkBox(tk.Frame):
         # FIXME:テキスト取得から画像の取得まで時間がかかることで、画面変化のタイミングでリストが更新される場合がある
         # FIXME: 処理に時間がかかってmainloopが一瞬止まる
         logger = self.logger.getChild("update_pkbox")
-        logger.debug("Execute update_pkbox")
+        logger.debug("Run update_pkbox")
         if self.ocr_runner.is_ocr_running: # カメラが有効だった場合
 
             framelist = self.ocr_runner.get_framelist()
@@ -414,7 +423,8 @@ class CanvasPkBox(tk.Frame):
         Args:
             crop_frame (np.ndarray): チームリストを切り抜いた画像
         """
-        self.logger.debug("Execute func_save_pkbox")
+        logger = self.logger.getChild("func_save_pkbox")
+        logger.debug("Run func_save_pkbox")
         # フレームを取得
         self.crop_frame = crop_frame
 
@@ -469,7 +479,7 @@ class CanvasPkBox(tk.Frame):
         """
         フレーム内のボックスを再読み込みする
         """
-        self.logger.debug("Execute func_reload_pkbox")
+        self.logger.debug("Run func_reload_pkbox")
         try:
             self.keylist, self.dislist, self.cutframelist, self.outline_iconlist = self.pkhash.RecognitionPokemonImages(self.crop_frame)
         except:
@@ -564,7 +574,7 @@ class SubFrame_PkBox(tk.Frame):
         キャンバス上で右クリックした時のイベント
         メニューを表示
         """
-        self.logger.debug("Execute on_canvas_right_click")
+        self.logger.debug("Run on_canvas_right_click")
         if self.key is None:
             self.logger.info("Not Pokemon info")
             return
@@ -575,7 +585,7 @@ class SubFrame_PkBox(tk.Frame):
         """
         キャンバス上で左クリックした時のイベント
         """
-        self.logger.debug("Execute on_canvas_left_click")
+        self.logger.debug("Run on_canvas_left_click")
 
         if self.cut_frame is not None and self.cut_frame.size > 0:
             if self.brightness_factor == 0:
@@ -588,7 +598,7 @@ class SubFrame_PkBox(tk.Frame):
         """
         手持ちポケモンの一覧をリロードする
         """
-        self.logger.debug("Execute reload_subpkbox")
+        self.logger.debug("Run reload_subpkbox")
 
         # ソース画像を取得する部分
         self.source_image = cv2.cvtColor(cv2.convertScaleAbs(self.cut_frame, beta=self.brightness_factor), cv2.COLOR_BGR2RGB)
@@ -603,7 +613,7 @@ class SubFrame_PkBox(tk.Frame):
         """
         手持ちポケモンの一覧を更新する
         """
-        self.logger.debug("Execute update_subpkbox")
+        self.logger.debug("Run update_subpkbox")
         self.reload_subpkbox()
 
         if self.search_distance > 8:
@@ -647,7 +657,7 @@ class ClickMenu:
         Args:
             cut_frame (np.ndarray): アイコンの切抜き画像
         """
-        self.logger.debug("Execute addHashData")
+        self.logger.debug("Run addHashData")
         self.cut_frame = cut_frame
         self.outline_frame = self.pkhash.GetImageByAllContours(self.cut_frame)
 
@@ -687,7 +697,7 @@ class ClickMenu:
             """
             csvの追加
             """
-            self.logger.debug("Execute update_csv")
+            self.logger.debug("Run update_csv")
             key = self.entry_key.get()
             # name = self.entry_name.get()
             # form = self.entry_form.get()
@@ -735,7 +745,7 @@ class ClickMenu:
             key (str): ポケモンの識別キー
             cut_frame (np.ndarray): ポケモンのアイコン
         """
-        self.logger.debug("Execute updateHashData")
+        self.logger.debug("Run updateHashData")
         self.cut_frame = cut_frame
         self.outline_frame = self.pkhash.GetImageByAllContours(self.cut_frame)
 
@@ -752,7 +762,7 @@ class ClickMenu:
         """
         ポケモンバトルデータベースの検索
         """
-        self.logger.debug("Execute searchDB")
+        self.logger.debug("Run searchDB")
         self.searchdb.searchdb(pokemon_name)
 
     def viewInfo(self, key:str, cut_frame:np.ndarray) -> None:
@@ -764,7 +774,7 @@ class ClickMenu:
         """
         #FIXME: 種族値をグラフ表示にしたため、ラベル表示のソースは削除していい
         # ポケモン情報を表示するウィンドウ
-        self.logger.debug("Execute view_pkinfo")
+        self.logger.debug("Run view_pkinfo")
 
         self.cut_frame = cut_frame
         
@@ -772,11 +782,13 @@ class ClickMenu:
         # p.start()
         
         self.sub_window = tk.Toplevel(self.root)
+        self.sub_window.withdraw() # ウィンドウを非表示にする
         self.sub_window.title("基本ポケモン情報")
 
         # メインフレーム
         self.frame = PokemonInfoBaseFrame(self.sub_window, cut_frame, key)
         self.frame.pack(fill=tk.BOTH, pady=10)
+        self.sub_window.deiconify() # ウィンドウの再表示
         
     def process_viewinfo(self, key):
         self.sub_window = tk.Toplevel(self.root)
@@ -874,7 +886,7 @@ class PokemnImageInfo(tk.Frame):
         self.label_type1_value.grid(
             row=3,column=2,sticky=tk.W)
         self.label_type2_value.grid(
-            row=3,column=3,sticky=tk.W)
+            row=4,column=2,sticky=tk.W)
 
 class PokemonStatus(tk.Frame):
     def __init__(self, master:tk.Frame, pokemon_series:pd.Series, **kwargs):
@@ -970,27 +982,50 @@ class WeakType(tk.Frame):
 
         self.label_weaktype = tk.Label(self, text="弱点", font=font).grid(row=0,column=0)
 
-        self.frame_weaktype_effective = tk.Frame(self)
-        self.frame_weaktype_noteffective = tk.Frame(self)
+        self.frame_weaktype = tk.Frame(self)
+        self.frame_weaktype.grid(row=1, column=0)
+        # self.frame_weaktype_effective = tk.Frame(self)
+        # self.frame_weaktype_noteffective = tk.Frame(self)
 
-        self.frame_weaktype_effective.grid(row=1,column=0)
-        self.frame_weaktype_noteffective.grid(row=2,column=0)
+        # self.frame_weaktype_effective.grid(row=1,column=0)
+        # self.frame_weaktype_noteffective.grid(row=2,column=0)
 
         weaktype_effective_list = []
         weaktype_noteffective_list = []
+        weaktype_disable_list = []
 
         weaktype_df = PkTypeCompatibility().effectivetype(pokemon_series["Type1"],pokemon_series["Type2"]).sort_values(ascending=False)
         for index, row in weaktype_df.items():
             if row>=2: #こうかはばつぐん
-                weaktype_effective_list.append(tk.Label(self.frame_weaktype_effective, text=f"{index}\tx{row}", font=font).pack())
-            if row<1: #こうかはいまひとつ
-                weaktype_noteffective_list.append(tk.Label(self.frame_weaktype_noteffective, text=f"{index}\tx{row}", font=font).pack())
+                weaktype_effective_list.append([
+                    tk.Label(self.frame_weaktype, text=f"{index}", anchor=tk.W, font=font),
+                    tk.Label(self.frame_weaktype, text=f"x{row}", anchor=tk.W, font=font)])
+            elif row==0: # こうかはない
+                weaktype_disable_list.append([
+                    tk.Label(self.frame_weaktype, text=f"{index}", anchor=tk.W, font=font),
+                    tk.Label(self.frame_weaktype, text=f"x{row}", anchor=tk.W, font=font)
+                ])
+            elif row < 1: #こうかはいまひとつ
+                weaktype_noteffective_list.append([
+                    tk.Label(self.frame_weaktype, text=f"{index}", anchor=tk.W, font=font),
+                    tk.Label(self.frame_weaktype, text=f"x{row}", anchor=tk.W, font=font)])
+        
+        for i in range(len(weaktype_effective_list)):
+            weaktype_effective_list[i][0].grid(row=i, column=0, sticky=tk.W)
+            weaktype_effective_list[i][1].grid(row=i, column=1, sticky=tk.W)
+        for i in range(len(weaktype_noteffective_list)):
+            weaktype_noteffective_list[i][0].grid(row=(i+len(weaktype_effective_list)), column=0, sticky=tk.W)
+            weaktype_noteffective_list[i][1].grid(row=(i+len(weaktype_effective_list)), column=1, sticky=tk.W)
+        for i in range(len(weaktype_disable_list)):
+            weaktype_disable_list[i][0].grid(row=(i+len(weaktype_effective_list)+len(weaktype_noteffective_list)), column=0, sticky=tk.W)
+            weaktype_disable_list[i][1].grid(row=(i+len(weaktype_effective_list)+len(weaktype_noteffective_list)), column=1, sticky=tk.W)
 
 # 参考元：https://qiita.com/kotai2003/items/45953b4d037a62b2042c
 class StatusGraph(tk.Frame):
     def __init__(self, master:tk.Tk, pokemon_series:pd.Series, **kwargs):
-        """種族値をグラフ表示するフレーム_
-
+        """
+        種族値をグラフ表示するフレーム_
+        
         Args:
             master (tk.Tk): 親フレーム
             pokemon_series (pd.Series): ポケモンの情報を格納したSeries

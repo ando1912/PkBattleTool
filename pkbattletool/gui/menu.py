@@ -4,8 +4,6 @@ from logging import getLogger
 
 import webbrowser
 
-from multiprocessing import Pool
-
 from module import config
 
 class MenuBar(tk.Menu):
@@ -21,7 +19,7 @@ class MenuBar(tk.Menu):
         
         # Loggerの設定
         self.logger = getLogger("Log").getChild("MenuBar")
-        self.logger.debug("Hello MenuBar")
+        self.logger.debug("Called MenuBar")
         
         # self.subwindow = SubWindowMenu(self.root)
         self.subwindow = None
@@ -41,7 +39,8 @@ class MenuBar(tk.Menu):
         """
         環境設定
         """
-        self.logger.debug("Execute on_setting")
+        logger = self.logger.getChild("on_setting")
+        logger.info("Run on_setting")
         if self.subwindow is None or not tk.Toplevel.winfo_exists(self.subwindow):
             self.subwindow = tk.Toplevel(self.root)
             self.subwindow.title("環境設定")
@@ -59,7 +58,8 @@ class MenuBar(tk.Menu):
         """
         終了確認
         """
-        self.logger.debug("Execute on_exit")
+        logger = self.logger.getChild("on_exit")
+        logger.info("Run on_exit")
         if self.subwindow is None or not tk.Toplevel.winfo_exists(self.subwindow):
 
             self.subwindow = tk.Toplevel(self.root)
@@ -77,7 +77,8 @@ class MenuBar(tk.Menu):
         """
         バージョン情報を表示
         """
-        self.logger.debug("Execute on_versioninfo")
+        logger = self.logger.getChild("on_versioninfo")
+        logger.info("Run on_versioninfo")
         if self.subwindow is None or not tk.Toplevel.winfo_exists(self.subwindow):
             self.subwindow = tk.Toplevel(self.root)
             self.subwindow.title = ("バージョン情報")
@@ -97,6 +98,8 @@ class MenuBar(tk.Menu):
             width (int): 横幅
             height (int): 縦幅
         """
+        logger = self.logger.getChild("set_suwindow_geometry")
+        logger.debug("Run set_subwindow_geometry")
         self.subwindow.geometry("{}x{}+{}+{}".format(
                 width,
                 height,
@@ -114,11 +117,11 @@ class VersionInfo(tk.Frame):
         super().__init__(master, **kwargs)
         self.root = master
         
-        self.logger = getLogger("Log").getChild("VirsionInfo")
-        self.logger.info("Run VersionInfo")
+        self.logger = getLogger("Log").getChild("VersionInfo")
+        self.logger.info("Called VersionInfo")
 
         label_title = tk.Label(self, text="ポケモン対戦支援ツール", font=("MSゴシック", "10", "bold")).pack()
-        label_version = tk.Label(self, text="version beta 2.1").pack()
+        label_version = tk.Label(self, text="version beta 2.1.0").pack()
         label_githublink = tk.Label(self, text="https://github.com/ando1912/PkBattleTool", fg="blue", cursor="hand1")
         label_githublink.pack()
         label_githublink.bind("<Button-1>", lambda e:webbrowser.open_new("https://github.com/ando1912/PkBattleTool"))
@@ -130,7 +133,7 @@ class VersionInfo(tk.Frame):
         """
         終了処理
         """
-        self.logger.debug("Execute close")
+        self.logger.getChild("close").debug("Run close")
         self.root.destroy()
 
 class CloseSoftware(tk.Frame):
@@ -144,7 +147,7 @@ class CloseSoftware(tk.Frame):
         """
         super().__init__(master)
         self.logger = getLogger("Log").getChild("CloseSoftware")
-        self.logger.info("Run CloseSoftware")
+        self.logger.info("Called CloseSoftware")
         
         self.root = master
         self.app = app
@@ -167,13 +170,13 @@ class CloseSoftware(tk.Frame):
         self.app.click_close()
 
 class SettingInfo(tk.Frame):
-    #FIXME: カメラのID調査で処理が止まる
+    #FIXME: カメラのID調査で一時的にアプリケーション処理が止まる
     def __init__(self, master:tk.Toplevel, **kwargs):
         super().__init__(master, **kwargs)
         self.root = master
         
         self.logger = getLogger("Log").getChild("SettingInfo")
-        self.logger.info("Run SettingInfo")
+        self.logger.info("Called SettingInfo")
 
         # ウェジット
         self.label_pokemondb_url = tk.Label(self, text="ポケモンDB-URL")
@@ -256,6 +259,7 @@ class SettingInfo(tk.Frame):
         self.root.destroy()
     
     def check_activecam(self, id:int) -> bool:
+        self.logger.getChild("check_activecam").debug("Run check_activecam")
         cap = cv2.VideoCapture(id)
         if cap.isOpened():
             cap.release()
@@ -266,6 +270,8 @@ class SettingInfo(tk.Frame):
             return False
     # カメラのID一覧を取得
     def getCamInfo(self) -> dict:
+        logger = self.logger.getChild("getCamInfo")
+        logger.debug("Run getCamInfo")
         caminfo = {}
 
         for i in range(6):
@@ -283,7 +289,7 @@ class SettingInfo(tk.Frame):
         """
         環境設定の更新
         """
-        self.logger.debug("Execute update_config")
+        self.logger.getChild("update_config").debug("Run update_config")
         
         # 環境設定の取得
         new_config = {

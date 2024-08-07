@@ -10,11 +10,12 @@ from module import config
 import numpy as np
 
 class CameraCapture:
-    """
-    カメラキャプチャの管理
-    """
     def __init__(self) -> None:
+        """
+        カメラキャプチャの管理
+        """
         self.logger = getLogger("Log").getChild("CameraCapture")
+        self.logger.info("Called CameraCapture")
 
         self.video_source:int = int(config.get("DEFAULT","camera_id"))
         self.vid = cv2.VideoCapture(self.video_source)
@@ -34,19 +35,13 @@ class CameraCapture:
         self.is_capturing:bool = False
         self.capture_thread:Thread = None
         self.frame:cv2.typing.MatLike = None
-        
-        # 録画設定
-        fourcc = cv2.VideoWriter_fourcc("m","p","4","v")
-        name = "sample.mp4"
-        self.video = cv2.VideoWriter(name, fourcc, int(self.display_fps), (int(self.width), int(self.height)))
-        
-        self.is_record:bool = False
+    
     
     def start_capture(self) -> None:
         """
         カメラの撮影を開始する
         """
-        self.logger.getChild("start_capture").info("Execute start_capture")
+        self.logger.getChild("start_capture").info("Run start_capture")
         self.is_capturing= True
         self.capture_thread = Thread(target=self.capture_video)
         self.capture_thread.daemon = True
@@ -56,7 +51,7 @@ class CameraCapture:
         """
         カメラの撮影を停止する
         """
-        self.logger.getChild("stop_capture").info("Execute stop_capture")
+        self.logger.getChild("stop_capture").info("Run stop_capture")
         self.is_capturing = False
     
     def capture_video(self) -> None:
@@ -64,15 +59,13 @@ class CameraCapture:
         モードが有効の間、撮影したフレームを格納する
         """
         logger = self.logger.getChild("capture_video")
-        logger.info("Execute capture_video")
+        logger.info("Run capture_video")
         while self.is_capturing:
             logger.debug("VideoCapture.read")
             ret, frame = self.vid.read()
             if ret:
                 logger.debug("save frame")
                 self.frame = frame
-                if self.is_record:
-                    self.video.write(frame)
             
     def get_frame(self) -> np.ndarray:
         """カメラの画像を取得する
@@ -89,7 +82,7 @@ class CameraCapture:
         スクリーンショットした画像を保存する
         """
         logger = self.logger.getChild("save_frame")
-        logger.debug("Execute save_frame")
+        logger.debug("Run save_frame")
         # screenshot保存フォルダがなかった場合にフォルダを作成する
         try:
             if os.path.exists(f"{self.screenshot_folder_path}"):
@@ -110,7 +103,6 @@ class CameraCapture:
         """
         カメラを開放する
         """
-        self.logger.info("Execute release")
+        self.logger.info("Run release")
         if self.vid.isOpened():
             self.vid.release()
-        self.video.release()
