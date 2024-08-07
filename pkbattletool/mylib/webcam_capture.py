@@ -105,4 +105,3 @@ class CameraCapture:
         self.logger.info("Execute release")
         if self.vid.isOpened():
             self.vid.release()
-        self.video.release()
