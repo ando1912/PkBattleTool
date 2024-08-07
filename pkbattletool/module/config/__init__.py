@@ -8,13 +8,13 @@ sys.path.append(".")
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class ConfigIni(configparser.ConfigParser):
-    """
-    iniコンフィグの操作を行うクラス
-    """
     def __init__(self):
+        """
+        iniコンフィグの操作を行うクラス
+        """
         super().__init__()
         self.logger = getLogger("Log").getChild("ConfigIni")
-        self.logger.debug("Hello ConfigIni")
+        self.logger.info("Called ConfigIni")
 
         self.import_conf()
 
@@ -22,7 +22,7 @@ class ConfigIni(configparser.ConfigParser):
         """
         iniコンフィグのデフォルト設定を行う
         """
-        self.logger.debug("Execuse set_defaults")
+        self.logger.getChild("set_defaults").debug("Run set_defaults")
         self["DEFAULT"] = {
                 "pokedb_url": "https://sv.pokedb.tokyo/pokemon/list",
                 "season": 14,
@@ -36,7 +36,7 @@ class ConfigIni(configparser.ConfigParser):
                 "display_height" : 360}
         
     def print_conf(self):
-        self.logger.debug("Execuse print_conf")
+        self.logger.getChild("print_conf").debug("Run print_conf")
         cnt = 0
         for section in self:
             for label in self[section]:
@@ -44,21 +44,26 @@ class ConfigIni(configparser.ConfigParser):
                     cnt = cnt + 1
                     print(f"{cnt}:{section}:{label} = {self[section][label]}")
 
-    def import_conf(self) -> dict:
+    def import_conf(self):
         """
         iniコンフィグの読み込み
         """
-        self.logger.debug("Execuse import_conf")
+        logger = self.logger.getChild("import_conf")
+        logger.debug("Run import_conf")
         self.read(f"{PATH}/config.ini", encoding="utf-8")
 
         # 設定ファイルが存在しない場合はファイルを生成しデフォルト値を設定
         if not self.has_option("DEFAULT","pokedb_url"):
-            print("Create ini ...")
+            logger.debug("Create ini ...")
             self.set_defaults()
             with open(f"{PATH}/config.ini", "w") as configfile:
                 self.write(configfile)
 
     def write_conf(self):
+        """config.iniの更新時に古いファイルをリネームする
+        """
+        logger = self.logger.getChild("write_conf")
+        logger.debug("Run write_conf")
         path1 = f"{PATH}/config.ini"
         path2 = f"{PATH}/config.ini.old"
         path3 = f"{PATH}/config.ini.old2"
@@ -66,14 +71,21 @@ class ConfigIni(configparser.ConfigParser):
         # 2つ前のiniファイルがあったら削除する
         if os.path.exists(path3):
             os.remove(path3)
+            logger.debug(f"Remove config.ini.old2")
+        
         # 1つ前のiniファイルがあったらold2へリネームする
         if os.path.exists(path2):
             os.rename(path2, path3)
+            logger.debug("Rename config.ini.old -> config.ini.old2")
+        
         # config.iniをconfig.ini.oldにリネームする
         os.rename(path1,path2)
+        logger.debug("Rename config.ini -> config.ini.old")
+        
         # config.iniを新しく書き出す
         with open(f"{PATH}/config.ini", 'w') as configfile:
             self.write(configfile)
+        logger.debug("Write config.ini")
 
 _util = ConfigIni()
 

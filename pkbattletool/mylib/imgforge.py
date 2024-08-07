@@ -7,13 +7,14 @@ from .webcam_capture import CameraCapture
 PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 class CameraFrameForge():
-    """
-    ゲーム画面の切り抜きに関するクラス
-    option:message/namebox/pokemonbox
-    """
     def __init__(self,camera_capture:CameraCapture) -> None:
+        """ゲーム画像の切抜き
+
+        Args:
+            camera_capture (CameraCapture): カメラキャプチャ
+        """
         self.logger = getLogger("Log").getChild("CameraFrameForge")
-        self.logger.debug("Hello CameraFrameForge")
+        self.logger.debug("Called CameraFrameForge")
 
         self.width = int(camera_capture.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(camera_capture.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -51,41 +52,64 @@ class CameraFrameForge():
             }
 
 
-    def crop_frame(self, frame, option:str):
-        """
-        画像の切り出し
-        Return
-            frame:切り出し後のフレーム
+    def crop_frame(self, frame:np.ndarray, option:str) -> np.ndarray:
+        """画像の切抜き
+
+        Args:
+            frame (np.ndarray): 画像の切り出し
+            option (str): 切抜きのオプション
+
+        Returns:
+            np.ndarray: 切抜き後の画像
         """
         logger = self.logger.getChild("crop_frame")
-        logger.debug("Run crop_frame")
+        logger.debug(f"Run crop_frame({option})")
         top = self.options[option]["top"]
         bottom = self.options[option]["bottom"]
         left = self.options[option]["left"]
         right = self.options[option]["right"]
 
-        self.logger.debug(f"top:{top} / bottom:{bottom} / left:{left} / right:{right}")
-
         return frame[top:bottom,left:right]
 
-    def cvt_bgr2gray(self, frame:np.ndarray):
+    def cvt_bgr2gray(self, frame:np.ndarray) -> np.ndarray:
+        """画像のグレースケール処理
+
+        Args:
+            frame (np.ndarray): 変換前画像
+
+        Returns:
+            np.ndarray: 変換後画像
         """
-        画像のグレースケール処理
-        """
-        logger = self.logger.getChild("grayscale_frame")
+        
+        logger = self.logger.getChild("cvt_bgr2gray")
         logger.debug("Run cvt_bgr2gray")
         return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    def cvt_gray2binaly(self, grayscale_frame: np.ndarray, option:str):
+    def cvt_gray2binaly(self, grayscale_frame: np.ndarray, option:str) -> np.ndarray:
+        """画像の二値化処理
+
+        Args:
+            grayscale_frame (np.ndarray): 変換前のグレースケール画像
+            option (str): オプション
+
+        Returns:
+            np.ndarray: 変換後画像
         """
-        画像の二値化処理
-        """
-        logger = self.logger.getChild("binaly_frame")
+        logger = self.logger.getChild("cvt_gray2binaly")
         logger.debug("Run cvt_gray2binaly")
         _, binaly_frame = cv2.threshold(grayscale_frame, self.options[option]["thresh"], 255, cv2.THRESH_BINARY)
         return binaly_frame
     
     def diff_frames(self, frame_list:list[np.ndarray], option:str) -> np.ndarray:
+        """画像の共通部分抽出
+
+        Args:
+            frame_list (list[np.ndarray]): フレームリスト
+            option (str): オプション
+
+        Returns:
+            np.ndarray: 処理後画像
+        """
         logger = self.logger.getChild("diff_frames")
         logger.debug("Run diff_frames")
         
@@ -101,8 +125,8 @@ class CameraFrameForge():
     def save_frame(self, frame:np.ndarray, filename:str):
         """
         Arg:
-            frame:保存したいフレーム
-            file_name:ファイル名、要拡張子
+            frame (np.ndarray):保存したいフレーム
+            file_name (str):ファイル名、要拡張子
         """
         try:
             cv2.imwrite("{}".format(filename),frame)

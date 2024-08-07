@@ -90,7 +90,7 @@ class OcrRunner:
         スレッド開始処理
         """
 
-        self.logger.getChild("start_ocr_thread").info("Execute start_ocr_thread")
+        self.logger.getChild("start_ocr_thread").info("Run start_ocr_thread")
 
         self.is_ocr_running = True
         self.ocr_thread = threading.Thread(target=self.run_ocr_thread, name="Thread OCR")
@@ -101,7 +101,7 @@ class OcrRunner:
         """
         スレッド停止処理
         """
-        self.logger.getChild("stop_ocr_thread").info("Execute stop_ocr_thread")
+        self.logger.getChild("stop_ocr_thread").info("Run stop_ocr_thread")
         self.is_ocr_running = False
         
         self.framelist = []
@@ -168,7 +168,7 @@ class OcrRunner:
         """
         logger = self.logger.getChild("run_ocr_thread")
         
-        logger.info("Execute run_ocr_thread")
+        logger.info("Run run_ocr_thread")
         while self.is_ocr_running:
             # 画像の取得と加工
             frame = self.get_frame() # CameraCaptureからフレームの取得
@@ -200,7 +200,7 @@ class OcrRunner:
             str: 処理後のテキスト
         """
 
-        self.logger.getChild("normalize_text").debug("Execute normalize_text")
+        self.logger.getChild("normalize_text").debug("Run normalize_text")
         return re.compile('[!"#$%&\'\\\\()*+,-./:;<=>?@[\\]^_`{|}~「」〔〕“”〈〉『』【】＆＊・（）＄＃＠。、？！｀＋￥％ 　]').sub("",text)
 
     # FIXME: 実行時に動作が重くなる

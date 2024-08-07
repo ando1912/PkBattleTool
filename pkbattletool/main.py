@@ -12,6 +12,7 @@ class MainWindow(tk.Frame):
         super().__init__(master)
         
         self.logger = getLogger("Log").getChild("MainWindow")
+        self.logger.info("Called MainWIndow")
         self.root = master
         
         self.camera_capture = CameraCapture()
@@ -40,6 +41,8 @@ class MainWindow(tk.Frame):
         """
         終了時の処理
         """
+        logger = self.logger.getChild("close")
+        logger.info("Run close")
         self.frame_capturecontrol.close()
         self.frame_pkinfo.close()
         self.frame_canvaspkbox.close()
@@ -52,8 +55,10 @@ class Application(tk.Tk):
     """
     def __init__(self):
         super().__init__()
-        
         self.withdraw() # ウィンドウを非表示にする
+        
+        self.logger = getLogger("Log").getChild("Application")
+        self.logger.info("Called Application")
         
         # アイコンの設定
         # 参考；https://qiita.com/KMiura95/items/cae599efa8a908a4bb01
@@ -68,7 +73,7 @@ class Application(tk.Tk):
         menubar = MenuBar(self)
         
         self.protocol("WM_DELETE_WINDOW", self.click_close)
-        
+
         self.deiconify() # ウィンドウの再表示
         
     def click_close(self):
@@ -81,7 +86,7 @@ def setup_logging() -> Logger:
     logger = getLogger("Log")
     handler = StreamHandler()
 
-    LOGGER_LEVEL = DEBUG
+    LOGGER_LEVEL = INFO
     HANDLER_LEVEL = DEBUG
     
     logger.setLevel(LOGGER_LEVEL)
