@@ -54,18 +54,3 @@ class PkTypeCompatibility:
             return df1
         df2 = self.typedf[diffencetype2] # タイプ2の相性
         return df1*df2
-
-def main():
-    typecomp = PkTypeCompatibility()
-    type1 = "あく"
-    type2 = "ドラゴン"
-    type3 = "じめん"
-
-    df = typecomp.effectivetype(type1,type2)
-    df2 = typecomp.type_compatibility(type1,type2)
-    print(df[df>=2].sort_values(ascending=False))
-    print(df2)
-
-if __name__ == "__main__":
-    PATH = os.path.abspath(os.path.join(PATH, os.pardir))
-    main()
