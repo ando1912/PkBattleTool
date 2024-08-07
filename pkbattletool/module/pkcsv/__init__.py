@@ -34,6 +34,7 @@ class PkCSV:
     def Name_search2csv(self, name:str) -> pd.DataFrame:
         """
         ポケモン名をcsvファイルと照合し、合致するデータフレームを返す
+        名前が見つからなければ、類似度検索をする
         
         Arg:
             name[str] :  ポケモンの名前
