@@ -112,23 +112,30 @@ class PkInfo_OCR(tk.Frame):
                 logger.debug("Camera is True")
 
                 # OCRを実行する共通のフレームリスト
+                # grayscale_framelist = self.ocr_runner.get_grayscale_framelist()
+                # level_masked_frame = self.ocr_runner.get_masked_frame(grayscale_framelist, "level")
+                # level_text = self.ocr_runner.get_ocr_text(level_masked_frame, "level")
+
+                # try:
+                #     logger.debug("Read OCR(level) : %s", level_text)
+                # except Exception as e:
+                #     logger.exception(e)
+
+                # if level_text != None:
+                #     if "Lv" in level_text:
+                #         logger.info("Detected Namebox")
+                #         name_masked_frame = self.ocr_runner.get_masked_frame(grayscale_framelist, "namebox")
+                #         name_text = self.ocr_runner.get_ocr_text(name_masked_frame, "namebox")
+                #         logger.debug(f"Read OCR(pokemonbame) : {name_text}")
+                #         if name_text is not None or name_text != "":
+                #             self.func_search_name(name_text)
+                
                 grayscale_framelist = self.ocr_runner.get_grayscale_framelist()
-                level_masked_frame = self.ocr_runner.get_masked_frame(grayscale_framelist, "level")
-                level_text = self.ocr_runner.get_ocr_text(level_masked_frame, "level")
-
-                try:
-                    logger.debug("Read OCR(level) : %s", level_text)
-                except Exception as e:
-                    logger.exception(e)
-
-                if level_text != None:
-                    if "Lv" in level_text:
-                        logger.info("Detected Namebox")
-                        name_masked_frame = self.ocr_runner.get_masked_frame(grayscale_framelist, "namebox")
-                        name_text = self.ocr_runner.get_ocr_text(name_masked_frame, "namebox")
-                        logger.debug(f"Read OCR(pokemonbame) : {name_text}")
-                        if name_text is not None or name_text != "":
-                            self.func_search_name(name_text)
+                name_masked_frame = self.ocr_runner.get_masked_frame(grayscale_framelist, "namebox")
+                name_text = self.ocr_runner.get_ocr_text(name_masked_frame, "namebox")
+                logger.debug(f"Read OCR(pokemonbame) : {name_text}")
+                if name_text is not None or name_text != "":
+                    self.func_search_name(name_text)
         except Exception as e:
             logger.error(f"Fault check leveltext : {e}")
         finally:
@@ -772,11 +779,13 @@ class ClickMenu:
         # p.start()
         
         self.sub_window = tk.Toplevel(self.root)
+        self.sub_window.withdraw() # ウィンドウを非表示にする
         self.sub_window.title("基本ポケモン情報")
 
         # メインフレーム
         self.frame = PokemonInfoBaseFrame(self.sub_window, cut_frame, key)
         self.frame.pack(fill=tk.BOTH, pady=10)
+        self.sub_window.deiconify() # ウィンドウの再表示
         
     def process_viewinfo(self, key):
         self.sub_window = tk.Toplevel(self.root)
@@ -874,7 +883,7 @@ class PokemnImageInfo(tk.Frame):
         self.label_type1_value.grid(
             row=3,column=2,sticky=tk.W)
         self.label_type2_value.grid(
-            row=3,column=3,sticky=tk.W)
+            row=4,column=2,sticky=tk.W)
 
 class PokemonStatus(tk.Frame):
     def __init__(self, master:tk.Frame, pokemon_series:pd.Series, **kwargs):
@@ -970,21 +979,43 @@ class WeakType(tk.Frame):
 
         self.label_weaktype = tk.Label(self, text="弱点", font=font).grid(row=0,column=0)
 
-        self.frame_weaktype_effective = tk.Frame(self)
-        self.frame_weaktype_noteffective = tk.Frame(self)
+        self.frame_weaktype = tk.Frame(self)
+        self.frame_weaktype.grid(row=1, column=0)
+        # self.frame_weaktype_effective = tk.Frame(self)
+        # self.frame_weaktype_noteffective = tk.Frame(self)
 
-        self.frame_weaktype_effective.grid(row=1,column=0)
-        self.frame_weaktype_noteffective.grid(row=2,column=0)
+        # self.frame_weaktype_effective.grid(row=1,column=0)
+        # self.frame_weaktype_noteffective.grid(row=2,column=0)
 
         weaktype_effective_list = []
         weaktype_noteffective_list = []
+        weaktype_disable_list = []
 
         weaktype_df = PkTypeCompatibility().effectivetype(pokemon_series["Type1"],pokemon_series["Type2"]).sort_values(ascending=False)
         for index, row in weaktype_df.items():
             if row>=2: #こうかはばつぐん
-                weaktype_effective_list.append(tk.Label(self.frame_weaktype_effective, text=f"{index}\tx{row}", font=font).pack())
-            if row<1: #こうかはいまひとつ
-                weaktype_noteffective_list.append(tk.Label(self.frame_weaktype_noteffective, text=f"{index}\tx{row}", font=font).pack())
+                weaktype_effective_list.append([
+                    tk.Label(self.frame_weaktype, text=f"{index}", anchor=tk.W, font=font),
+                    tk.Label(self.frame_weaktype, text=f"x{row}", anchor=tk.W, font=font)])
+            elif row==0: # こうかはない
+                weaktype_disable_list.append([
+                    tk.Label(self.frame_weaktype, text=f"{index}", anchor=tk.W, font=font),
+                    tk.Label(self.frame_weaktype, text=f"x{row}", anchor=tk.W, font=font)
+                ])
+            elif row < 1: #こうかはいまひとつ
+                weaktype_noteffective_list.append([
+                    tk.Label(self.frame_weaktype, text=f"{index}", anchor=tk.W, font=font),
+                    tk.Label(self.frame_weaktype, text=f"x{row}", anchor=tk.W, font=font)])
+        
+        for i in range(len(weaktype_effective_list)):
+            weaktype_effective_list[i][0].grid(row=i, column=0, sticky=tk.W)
+            weaktype_effective_list[i][1].grid(row=i, column=1, sticky=tk.W)
+        for i in range(len(weaktype_noteffective_list)):
+            weaktype_noteffective_list[i][0].grid(row=(i+len(weaktype_effective_list)), column=0, sticky=tk.W)
+            weaktype_noteffective_list[i][1].grid(row=(i+len(weaktype_effective_list)), column=1, sticky=tk.W)
+        for i in range(len(weaktype_disable_list)):
+            weaktype_disable_list[i][0].grid(row=(i+len(weaktype_effective_list)+len(weaktype_noteffective_list)), column=0, sticky=tk.W)
+            weaktype_disable_list[i][1].grid(row=(i+len(weaktype_effective_list)+len(weaktype_noteffective_list)), column=1, sticky=tk.W)
 
 # 参考元：https://qiita.com/kotai2003/items/45953b4d037a62b2042c
 class StatusGraph(tk.Frame):
