@@ -1023,8 +1023,9 @@ class WeakType(tk.Frame):
 # 参考元：https://qiita.com/kotai2003/items/45953b4d037a62b2042c
 class StatusGraph(tk.Frame):
     def __init__(self, master:tk.Tk, pokemon_series:pd.Series, **kwargs):
-        """種族値をグラフ表示するフレーム_
-
+        """
+        種族値をグラフ表示するフレーム_
+        
         Args:
             master (tk.Tk): 親フレーム
             pokemon_series (pd.Series): ポケモンの情報を格納したSeries
