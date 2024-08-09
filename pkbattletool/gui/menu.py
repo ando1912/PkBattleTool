@@ -106,10 +106,10 @@ class MenuBar(tk.Menu):
                 int(self.root.winfo_x()+self.root.winfo_width()/2-width/2),
                 int(self.root.winfo_y()+self.root.winfo_height()/2-height/2)))
 
+#参考：参考：https://tomtom-stock.com/2022/03/01/tkinter-texthyperlink/
 class VersionInfo(tk.Frame):
     def __init__ (self, master:tk.Toplevel, **kwargs):
         """バージョン情報を表示するクラス
-        参考：https://tomtom-stock.com/2022/03/01/tkinter-texthyperlink/
 
         Args:
             master (tk.Toplevel): 親のサブウィンドウ
@@ -121,7 +121,7 @@ class VersionInfo(tk.Frame):
         self.logger.info("Called VersionInfo")
 
         label_title = tk.Label(self, text="ポケモン対戦支援ツール", font=("MSゴシック", "10", "bold")).pack()
-        label_version = tk.Label(self, text="version beta 2.1.0").pack()
+        label_version = tk.Label(self, text="version beta 2.1.1").pack()
         label_githublink = tk.Label(self, text="https://github.com/ando1912/PkBattleTool", fg="blue", cursor="hand1")
         label_githublink.pack()
         label_githublink.bind("<Button-1>", lambda e:webbrowser.open_new("https://github.com/ando1912/PkBattleTool"))
@@ -137,7 +137,6 @@ class VersionInfo(tk.Frame):
         self.root.destroy()
 
 class CloseSoftware(tk.Frame):
-
     def __init__(self, master:tk.Toplevel, app:tk.Tk):
         """アプリ終了の確認ポップアップ
 
@@ -172,6 +171,11 @@ class CloseSoftware(tk.Frame):
 class SettingInfo(tk.Frame):
     #FIXME: カメラのID調査で一時的にアプリケーション処理が止まる
     def __init__(self, master:tk.Toplevel, **kwargs):
+        """環境設定ウィンドウ
+
+        Args:
+            master (tk.Toplevel): サブウィンドウ
+        """
         super().__init__(master, **kwargs)
         self.root = master
         
@@ -259,6 +263,14 @@ class SettingInfo(tk.Frame):
         self.root.destroy()
     
     def check_activecam(self, id:int) -> bool:
+        """カメラのアクティブ確認
+
+        Args:
+            id (int): カメラID
+
+        Returns:
+            bool: アクティブ→True, ノンアクティブ→False
+        """
         self.logger.getChild("check_activecam").debug("Run check_activecam")
         cap = cv2.VideoCapture(id)
         if cap.isOpened():
@@ -270,6 +282,11 @@ class SettingInfo(tk.Frame):
             return False
     # カメラのID一覧を取得
     def getCamInfo(self) -> dict:
+        """アクティブカメラのID情報を取得
+
+        Returns:
+            dict: IDとアクティブ情報の辞書リスト
+        """
         logger = self.logger.getChild("getCamInfo")
         logger.debug("Run getCamInfo")
         caminfo = {}
@@ -285,7 +302,7 @@ class SettingInfo(tk.Frame):
 
         return caminfo
     
-    def update_config(self):
+    def update_config(self) -> None:
         """
         環境設定の更新
         """
