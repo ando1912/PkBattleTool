@@ -73,8 +73,6 @@ class CameraCapture:
         Returns:
             ndarray: 画像
         """
-        
-        
         return self.frame
 
     def save_frame(self) -> None:
