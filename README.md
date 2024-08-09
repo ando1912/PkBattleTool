@@ -13,13 +13,17 @@
 - ポケモンSVの対戦画面を読み込み、相手の手持ちポケモンの情報を簡単に表示できる対戦支援ツール
 - [ポケモンバトルデータベース](https://sv.pokedb.tokyo/ "ポケモンバトルデータベース")へのアクセスを簡略化し、プレイヤー自身で調べる手間を減らす
 
-# 開発環境
+![システムイメージ](https://github.com/user-attachments/assets/816f2d6f-2815-4e4e-914d-e1c15f5a9b5c)
+
+## 開発・動作環境
+- WIndows10
 - Python 3.11.9
-- Anaconda
-- Tesseract
+- Anaconda 24.1.2
+- Tesseract-OCR 5.4.0
 
 ## 実行環境構築
 ### 1. Tesseractのインストール
+本ツールでは、ポケモン名認識などにTesseractr OCRを使用しています。  
 [Tesseract OCR をWindowsにインストールする方法](https://gammasoft.jp/blog/tesseract-ocr-install-on-windows/)を参考にしながらインストールしてください
 
 ### 2. Anacondaの仮想環境の構築
@@ -91,25 +95,8 @@ main.py
    - 現時点で手持ち一覧の識別が出来るポケモンはごく一部のみのため、識別出来ないポケモンが多々います
    - 登録されていないポケモンや、誤認識をしたポケモンがいた場合、自身で登録をしてください。
 
-<!---
 
-# 使用技術
-## 画像認識
-### [dHash方式によるポケモン画像判別](https://note.com/kaseki_mtg/n/n6df12de8981a "openCVでdHash方式のポケモン画像判別")
-1. 相手の手持ち選出画面を切り抜く
-2. 各ポケモンを切り抜く
-3. 二値変換を行う
-4. 9x8サイズにリサイズする
-5. Hash値を求める
-6. DBと照合し、Hash値が類似するポケモンを調べる
-
-|選出画面|輪郭切り抜き|二値変換|リサイズ(9x8)|Hash|
-|:-:|:-:|:-:|:-:|:-:|
-|<img src="https://github.com/ando1912/PkBattleTool/assets/127027317/30ce9525-4554-4e40-b063-226407d6a881" width="200">|![240114002603_2](https://github.com/ando1912/PkBattleTool/assets/127027317/a826e125-efb6-41d9-a8da-c7a49d64efd1)|![240114002603_2](https://github.com/ando1912/PkBattleTool/assets/127027317/08b8d76e-cc4e-4967-9536-de007aba4036)|![20240409141105](https://github.com/ando1912/PkBattleTool/assets/127027317/60de3b37-128a-4ecd-9e67-92993ef7eeb6)|F0 28 B0 F1 E6 F0 F0 F1|
-
---->
-
-# これから開発したいなーと思ってること
+# 今後の展望
 - 画像認識精度のブラッシュアップ
   - 選出画面アイコンでの判別から、3Dグラフィックからの画像認識へ
 - 動作の安定化
