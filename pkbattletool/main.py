@@ -12,7 +12,7 @@ class MainWindow(tk.Frame):
         super().__init__(master)
         
         self.logger = getLogger("Log").getChild("MainWindow")
-        self.logger.info("Called MainWIndow")
+        self.logger.info("Called MainWindow")
         self.root = master
         
         self.camera_capture = CameraCapture()
@@ -95,9 +95,9 @@ def setup_logging() -> Logger:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    if not os.path.exists(f"log/"):
-        os.mkdir("log/")
-    log_path = f"log/log_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}.txt"
+    if not os.path.exists(f"logs/"):
+        os.mkdir("logs/")
+    log_path = f"logs/log_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}.txt"
     fh = FileHandler(filename=log_path)
     fh.setLevel(LOGGER_LEVEL)
     fh.setFormatter(formatter)
