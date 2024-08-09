@@ -26,7 +26,6 @@ class PkCSV:
             "Ability1":"str","Ability2":"str","HAbility":"str","HP":"int","Atk":"int","Def":"int",
             "SpA":"int","SpD":"int","Spe":"int","Tot":"int","Hash":"str"},encoding = "shift-jis",keep_default_na=False).replace({"":None})
         self.logger.debug("Load pokedb_SV.csv")
-        # print(self.pokemon_df.head(5))
     
     def WriteCSV(self, new_df):
         new_df.to_csv(self.filename, mode="w", encoding="shift-jis")
