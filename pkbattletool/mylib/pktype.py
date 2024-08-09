@@ -39,7 +39,7 @@ class PkTypeCompatibility:
         return comp1*comp2
 
     def effectivetype(self, diffencetype1:str, diffencetype2:str = None) -> pd.Series:
-        """_summary_複合タイプの相性の参照
+        """複合タイプの相性の参照
 
         Args:
             diffencetype1 (str): タイプ1
