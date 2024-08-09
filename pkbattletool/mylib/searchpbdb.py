@@ -15,5 +15,9 @@ class SearchDB:
         self.browser =  webbrowser.get('"{}" %s'.format(self.browser_path))
 
     def searchdb(self, name:str) -> None:
-        "ブラウザを開く"
+        """ポケモンバトルデータベースのブラウザを開く
+
+        Args:
+            name (str): ポケモン名
+        """
         self.browser.open_new("{}?season={}&rule={}&name={}".format(self.url,self.season,self.rule,name))
