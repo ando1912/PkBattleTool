@@ -81,9 +81,9 @@ if __name__ == '__main__':
     logger.addHandler(handler)
     
     
-    if not os.path.exists(f"{PATH}/log/"):
-        os.mkdir(f"{PATH}/log")
-    log_path = f"{PATH}/log/log_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}.txt"
+    if not os.path.exists(f"{PATH}/logs/"):
+        os.mkdir(f"{PATH}/logs")
+    log_path = f"{PATH}/logs/log_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}.txt"
     
     fh = FileHandler(filename=log_path)
     fh.setLevel(LOGGER_LEVEL)
