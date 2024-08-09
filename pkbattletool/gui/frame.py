@@ -984,11 +984,6 @@ class WeakType(tk.Frame):
 
         self.frame_weaktype = tk.Frame(self)
         self.frame_weaktype.grid(row=1, column=0)
-        # self.frame_weaktype_effective = tk.Frame(self)
-        # self.frame_weaktype_noteffective = tk.Frame(self)
-
-        # self.frame_weaktype_effective.grid(row=1,column=0)
-        # self.frame_weaktype_noteffective.grid(row=2,column=0)
 
         weaktype_effective_list = []
         weaktype_noteffective_list = []
@@ -1088,9 +1083,7 @@ class PokemonInfoBaseFrame(tk.Frame):
 
         # フレームの配置
         self.frame_baseinfo.grid(row=0, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
-        # self.frame_basestatus.grid(row=0, column=1, sticky=tk.W+tk.E+tk.N+tk.S)
         self.frame_baseweaktype.grid(row=0,column=1,rowspan=2,sticky=tk.W+tk.E+tk.N+tk.S)
-        # self.canvas_status.get_tk_widget().grid(row=1,column=0)
         self.frame_statusgraph.grid(row=1, column=0)
 
         self.root.deiconify()
