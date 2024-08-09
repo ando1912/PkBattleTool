@@ -122,7 +122,7 @@ class CameraFrameForge():
             base_img = cv2.bitwise_and(base_img, base_img, mask=mask)
         return base_img
     
-    def save_frame(self, frame:np.ndarray, filename:str):
+    def save_frame(self, frame:np.ndarray, filename:str) -> None:
         """
         Arg:
             frame (np.ndarray):保存したいフレーム
