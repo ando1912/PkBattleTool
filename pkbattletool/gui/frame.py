@@ -778,9 +778,6 @@ class ClickMenu:
 
         self.cut_frame = cut_frame
         
-        # p = Process(target = self.process_viewinfo, args=(key,))
-        # p.start()
-        
         self.sub_window = tk.Toplevel(self.root)
         self.sub_window.withdraw() # ウィンドウを非表示にする
         self.sub_window.title("基本ポケモン情報")
@@ -1067,7 +1064,7 @@ class PokemonInfoBaseFrame(tk.Frame):
         self.logger.info("Called PokemonInfoBaseFrame")
 
         self.root = master
-        self.root.withdraw() # 非表示
+        self.root.withdraw() # ウィンドウの非表示
         self.frame = frame
         self.pokemon_series = pkcsv.get_series(key)
 
@@ -1086,4 +1083,4 @@ class PokemonInfoBaseFrame(tk.Frame):
         self.frame_baseweaktype.grid(row=0,column=1,rowspan=2,sticky=tk.W+tk.E+tk.N+tk.S)
         self.frame_statusgraph.grid(row=1, column=0)
 
-        self.root.deiconify()
+        self.root.deiconify() # ウィンドウの再表示
