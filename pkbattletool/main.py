@@ -86,8 +86,8 @@ def setup_logging() -> Logger:
     logger = getLogger("Log")
     handler = StreamHandler()
 
-    LOGGER_LEVEL = INFO
-    HANDLER_LEVEL = DEBUG
+    LOGGER_LEVEL = DEBUG
+    HANDLER_LEVEL = INFO
     
     logger.setLevel(LOGGER_LEVEL)
     handler.setLevel(HANDLER_LEVEL)
