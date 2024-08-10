@@ -83,7 +83,7 @@ class CameraCapture:
         logger.debug("Run save_frame")
         # screenshot保存フォルダがなかった場合にフォルダを作成する
         try:
-            if os.path.exists(f"{self.screenshot_folder_path}"):
+            if not os.path.exists(f"{self.screenshot_folder_path}"):
                 os.mkdir(f"{self.screenshot_folder_path}")
                 logger.info(f"Success makedir {self.screenshot_folder_path}")
         except Exception as e:
@@ -92,7 +92,7 @@ class CameraCapture:
         file_name = f"screenshot_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}"
         try:
             cv2.imwrite(f"{self.screenshot_folder_path}/{file_name}.png", self.frame)
-            print("save as {}".format(file_name))
+            logger.info(f"save as {file_name}")
         except Exception as e:
             self.logger.error(f"Fault save image")
             self.logger.exception(e)
