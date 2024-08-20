@@ -81,9 +81,10 @@ class PkHash:
             # 差分の計算
             distance = self.CalcHammingDistance(dhash, row["Hash"])
             dic[index] = distance
-            if distance <= 8:
-                logger.debug(f"Found key={index}/distance={distance}")
-                return index, distance
+            # 違う画像の類似度が低くなったときに、正しい画像を認識しないため削除
+            # if distance <= 8:
+            #     logger.debug(f"Found key={index}/distance={distance}")
+            #     return index, distance
 
         # 距離が最小の物を返す
         min_key = min(dic.items(), key=lambda x: x[1])[0]
@@ -141,11 +142,11 @@ class PkHash:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # 閾値が低いと、輝度の高いポケモンのアイコンを認識しなくなる
         try:
-            _, binary_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
+            _, binary_img = cv2.threshold(gray, 170, 255, cv2.THRESH_BINARY_INV)
             cv2.waitKey(0)
             contours = self.FindContours(binary_img)
         except:
-            _, binary_img = cv2.threshold(gray, 130, 255, cv2.THRESH_BINARY_INV)
+            _, binary_img = cv2.threshold(gray, 170, 255, cv2.THRESH_BINARY_INV)
             cv2.waitKey(0)
             contours = self.FindContours(binary_img)
 

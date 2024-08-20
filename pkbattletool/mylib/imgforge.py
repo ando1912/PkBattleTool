@@ -38,8 +38,8 @@ class CameraFrameForge():
                 "right":int(self.width*0.951),
                 "thresh":180},
             "pokemonbox":{
-                "top":int(self.height*0.213),
-                "bottom":int(self.height*0.774),
+                "top":int(self.height*0.212),
+                "bottom":int(self.height*0.772),
                 "left":int(self.width*0.642),
                 "right":int(self.width*0.697),
                 "thresh":180},

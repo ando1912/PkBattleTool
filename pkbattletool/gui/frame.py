@@ -463,7 +463,7 @@ class CanvasPkBox(tk.Frame):
             for i in range(0,6):
                 if not os.path.exists(f"{self.screenshot_folder_path}/icon/outline"):
                     os.makedirs(f"{self.screenshot_folder_path}/icon/outline")
-                if not os.path.exists(f"{self.screenshot_folder_path}/icon/outline"):
+                if not os.path.exists(f"{self.screenshot_folder_path}/icon/binary"):
                     os.makedirs(f"{self.screenshot_folder_path}/icon/binary")
 
                 cv2.imwrite(f"{self.screenshot_folder_path}/icon/outline/{date}_{i}.png",self.outline_iconlist[i])
